@@ -33,23 +33,37 @@ class CartController extends ChangeNotifier {
 		final uri = Uri.parse(apiBaseUrl);
 		final payload = {
 			'entity': 'cart_item',
-			'action': 'add',
+			'action': 'add_to_cart',  // ← تم التعديل هنا
 			...item.toJsonForRequest(),
 		};
+
+		if (kDebugMode) {
+			print('>>> CartController.addToCart payload: ${jsonEncode(payload)}');
+		}
+
 		final response = await http.post(
 			uri,
 			headers: {'Content-Type': 'application/json'},
 			body: jsonEncode(payload),
 		);
 
+		if (kDebugMode) {
+			print('<<< Response[${response.statusCode}]: ${response.body}');
+		}
+
 		if (response.statusCode == 200) {
-			final data = jsonDecode(response.body);
-			if (data['success'] == true) {
-				_items.add(item);
-				notifyListeners();
-				return true;
+			try {
+				final data = jsonDecode(response.body);
+				if (data['success'] == true) {
+					_items.add(item);
+					notifyListeners();
+					return true;
+				}
+				return false;
+			} catch (e) {
+				if (kDebugMode) print('Error decoding JSON: $e');
+				throw Exception("استجابة غير صالحة من الخادم: $e");
 			}
-			return false;
 		} else {
 			throw Exception("خطأ في الإضافة إلى السلة: ${response.statusCode}");
 		}
@@ -63,11 +77,19 @@ class CartController extends ChangeNotifier {
 			'action': 'delete',
 			'id': cartItemId,
 		};
+		if (kDebugMode) {
+			print('>>> CartController.deleteCartItem payload: ${jsonEncode(payload)}');
+		}
+
 		final response = await http.post(
 			uri,
 			headers: {'Content-Type': 'application/json'},
 			body: jsonEncode(payload),
 		);
+
+		if (kDebugMode) {
+			print('<<< Response[${response.statusCode}]: ${response.body}');
+		}
 
 		if (response.statusCode == 200) {
 			final data = jsonDecode(response.body);
@@ -90,16 +112,23 @@ class CartController extends ChangeNotifier {
 			'action': 'update',
 			...item.toJsonForRequest(),
 		};
+		if (kDebugMode) {
+			print('>>> CartController.updateCartItem payload: ${jsonEncode(payload)}');
+		}
+
 		final response = await http.post(
 			uri,
 			headers: {'Content-Type': 'application/json'},
 			body: jsonEncode(payload),
 		);
 
+		if (kDebugMode) {
+			print('<<< Response[${response.statusCode}]: ${response.body}');
+		}
+
 		if (response.statusCode == 200) {
 			final data = jsonDecode(response.body);
 			if (data['success'] == true) {
-				// نحدّث العنصر محليًا
 				final index = _items.indexWhere((i) => i.id == item.id);
 				if (index != -1) {
 					_items[index] = item;
@@ -118,14 +147,17 @@ class CartController extends ChangeNotifier {
 		required String userId,
 		required String productId,
 		required String quantity,
-		required String unitPrice, // إضافة المعامل unitPrice
+		required String unitPrice,
 	}) async {
+		if (kDebugMode) {
+			print('>>> CartController.addCartItem args: userId=$userId, productId=$productId, quantity=$quantity, unitPrice=$unitPrice');
+		}
 		final item = CartItemModel.create(
-			id: '', // يمكن تخصيصه إذا كان لديك طريقة لتحديده
+			id: DateTime.now().millisecondsSinceEpoch.toString(),
 			userId: userId,
 			productId: productId,
 			quantity: quantity,
-			unitPrice: unitPrice, // تمرير unitPrice
+			unitPrice: unitPrice,
 		);
 		return await addToCart(item);
 	}
@@ -139,12 +171,19 @@ class CartController extends ChangeNotifier {
 			'user_id': userId,
 			'items': items.map((item) => item.toJsonForRequest()).toList(),
 		};
+		if (kDebugMode) {
+			print('>>> CartController.confirmOrder payload: ${jsonEncode(payload)}');
+		}
 
 		final response = await http.post(
 			uri,
 			headers: {'Content-Type': 'application/json'},
 			body: jsonEncode(payload),
 		);
+
+		if (kDebugMode) {
+			print('<<< Response[${response.statusCode}]: ${response.body}');
+		}
 
 		if (response.statusCode == 200) {
 			final data = jsonDecode(response.body);

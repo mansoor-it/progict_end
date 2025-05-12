@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../service/ProductDetailsPage_server.dart';
-import 'cart_screen.dart';
-//////////////////////////oooo
+import '../service/server_cart.dart';
+import 'cart_screen.dart';                // ← تأكد أن هذا المسار واسم الملف صحيح
+
 List<Map<String, dynamic>> cartItems = []; // قائمة السلة
 
 class AllProductsPage extends StatefulWidget {
@@ -26,6 +27,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
 	bool isLoading = true;
 
 	final AllProductsController _controller = AllProductsController();
+	final CartController _cartController = CartController();
 
 	@override
 	void initState() {
@@ -57,7 +59,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
 	@override
 	Widget build(BuildContext context) {
 		return Directionality(
-			textDirection: TextDirection.rtl, // دعم اللغة العربية
+			textDirection: TextDirection.rtl,
 			child: Scaffold(
 				appBar: AppBar(
 					title: Text(widget.storeName),
@@ -68,7 +70,8 @@ class _AllProductsPageState extends State<AllProductsPage> {
 								Navigator.push(
 									context,
 									MaterialPageRoute(
-										builder: (context) => CartPage(userId: '1', cartItems: cartItems),
+										builder: (context) =>
+												CartPage(userId: '1', cartItems: cartItems), // ← استخدم CartScreen
 									),
 								);
 							},
@@ -84,10 +87,14 @@ class _AllProductsPageState extends State<AllProductsPage> {
 					itemBuilder: (context, index) {
 						final product = products[index];
 						final productColors = colors
-								.where((c) => c['product_id'].toString() == product['id'].toString())
+								.where((c) =>
+						c['product_id'].toString() ==
+								product['id'].toString())
 								.toList();
 						final productSizes = sizes
-								.where((s) => s['product_id'].toString() == product['id'].toString())
+								.where((s) =>
+						s['product_id'].toString() ==
+								product['id'].toString())
 								.toList();
 
 						return ProductCard(
@@ -95,22 +102,41 @@ class _AllProductsPageState extends State<AllProductsPage> {
 							productColors: productColors,
 							productSizes: productSizes,
 							getColorFromName: getColorFromName,
-							onAddToCart: (item) {
-								final existingIndex = cartItems.indexWhere((cartItem) =>
-								cartItem['id'] == item['id'] &&
-										cartItem['color'] == item['color'] &&
-										cartItem['size'] == item['size']);
-								if (existingIndex != -1) {
-									cartItems[existingIndex]['quantity'] += item['quantity'];
-								} else {
-									cartItems.add(item);
-								}
-
-								ScaffoldMessenger.of(context).showSnackBar(
-									SnackBar(
-										content: Text("تمت إضافة ${item['name']} إلى السلة"),
-									),
+							onAddToCart: (itemMap) async {
+								final success = await _cartController.addCartItem(
+									userId: '1',
+									productId: itemMap['id'].toString(),
+									quantity: itemMap['quantity'].toString(),
+									unitPrice: itemMap['price'].toString(),
 								);
+								if (success) {
+									final existingIndex = cartItems.indexWhere(
+												(cartItem) =>
+										cartItem['id'] == itemMap['id'] &&
+												cartItem['color'] == itemMap['color'] &&
+												cartItem['size'] == itemMap['size'],
+									);
+									if (existingIndex != -1) {
+										cartItems[existingIndex]['quantity'] +=
+										itemMap['quantity'];
+									} else {
+										cartItems.add(itemMap);
+									}
+
+									ScaffoldMessenger.of(context).showSnackBar(
+										SnackBar(
+											content: Text(
+													"تمت إضافة ${itemMap['name']} إلى السلة بنجاح"),
+										),
+									);
+								} else {
+									ScaffoldMessenger.of(context).showSnackBar(
+										const SnackBar(
+											content: Text(
+													"حدث خطأ أثناء إضافة المنتج إلى السلة"),
+										),
+									);
+								}
 							},
 						);
 					},
@@ -125,7 +151,7 @@ class ProductCard extends StatefulWidget {
 	final List<dynamic> productColors;
 	final List<dynamic> productSizes;
 	final Color Function(String) getColorFromName;
-	final Function(Map<String, dynamic>) onAddToCart;
+	final Future<void> Function(Map<String, dynamic>) onAddToCart;
 
 	const ProductCard({
 		Key? key,
@@ -155,7 +181,8 @@ class _ProductCardState extends State<ProductCard> {
 				child: Column(
 					crossAxisAlignment: CrossAxisAlignment.start,
 					children: [
-						widget.product['image'] != null && widget.product['image'].toString().isNotEmpty
+						widget.product['image'] != null &&
+								widget.product['image'].toString().isNotEmpty
 								? ClipRRect(
 							borderRadius: BorderRadius.circular(12),
 							child: Image.memory(
@@ -173,14 +200,18 @@ class _ProductCardState extends State<ProductCard> {
 						const SizedBox(height: 8),
 						Text(
 							widget.product['name'] ?? "اسم المنتج",
-							style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+							style:
+							const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
 						),
 						const SizedBox(height: 4),
 						Text(widget.product['description'] ?? "وصف المنتج"),
 						const SizedBox(height: 4),
 						Text(
 							"السعر: ${widget.product['price']} \$",
-							style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+							style: const TextStyle(
+									fontSize: 18,
+									fontWeight: FontWeight.bold,
+									color: Colors.green),
 						),
 						const SizedBox(height: 8),
 
@@ -195,13 +226,15 @@ class _ProductCardState extends State<ProductCard> {
 										selectedColor = value;
 									});
 								},
-								items: widget.productColors.map<DropdownMenuItem<String>>((colorItem) {
+								items: widget.productColors
+										.map<DropdownMenuItem<String>>((colorItem) {
 									return DropdownMenuItem<String>(
 										value: colorItem['color_name'],
 										child: Row(
 											children: [
 												CircleAvatar(
-													backgroundColor: widget.getColorFromName(colorItem['color_name']),
+													backgroundColor:
+													widget.getColorFromName(colorItem['color_name']),
 													radius: 8,
 												),
 												const SizedBox(width: 8),
@@ -225,7 +258,8 @@ class _ProductCardState extends State<ProductCard> {
 										selectedSize = value;
 									});
 								},
-								items: widget.productSizes.map<DropdownMenuItem<String>>((sizeItem) {
+								items: widget.productSizes
+										.map<DropdownMenuItem<String>>((sizeItem) {
 									return DropdownMenuItem<String>(
 										value: sizeItem['size'],
 										child: Text(sizeItem['size']),
@@ -264,13 +298,15 @@ class _ProductCardState extends State<ProductCard> {
 								),
 								ElevatedButton(
 									onPressed: () {
-										if (widget.productColors.isNotEmpty && selectedColor == null) {
+										if (widget.productColors.isNotEmpty &&
+												selectedColor == null) {
 											ScaffoldMessenger.of(context).showSnackBar(
 												const SnackBar(content: Text("يرجى اختيار لون")),
 											);
 											return;
 										}
-										if (widget.productSizes.isNotEmpty && selectedSize == null) {
+										if (widget.productSizes.isNotEmpty &&
+												selectedSize == null) {
 											ScaffoldMessenger.of(context).showSnackBar(
 												const SnackBar(content: Text("يرجى اختيار مقاس")),
 											);
@@ -296,4 +332,3 @@ class _ProductCardState extends State<ProductCard> {
 		);
 	}
 }
-//////////////////////////////////////jjj/
