@@ -14,6 +14,7 @@ class CartItemModel {
 	final String? warningMessage;
 	final String createdAt;
 	final String updatedAt;
+	final String? storeId; // ✅ أضفنا هذا السطر
 
 	CartItemModel({
 		required this.id,
@@ -29,9 +30,9 @@ class CartItemModel {
 		this.warningMessage,
 		required this.createdAt,
 		required this.updatedAt,
+		this.storeId, // ✅ أضفنا هذا السطر
 	});
 
-	/// ننشئ عنصر جديد مع حساب totalPrice وتوليد timestamps
 	factory CartItemModel.create({
 		required String id,
 		required String userId,
@@ -43,6 +44,7 @@ class CartItemModel {
 		required String quantity,
 		String? sessionId,
 		String? warningMessage,
+		String? storeId, // ✅ أضفنا هذا السطر
 	}) {
 		final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 		final total = double.parse(unitPrice) * int.parse(quantity);
@@ -60,10 +62,10 @@ class CartItemModel {
 			warningMessage: warningMessage,
 			createdAt: now,
 			updatedAt: now,
+			storeId: storeId, // ✅ أضفنا هذا السطر
 		);
 	}
 
-	/// لتحديث الكمية أو السعر مثلاً وتحديث updated_at تلقائيًّا
 	CartItemModel copyWith({
 		String? id,
 		String? userId,
@@ -76,6 +78,7 @@ class CartItemModel {
 		String? totalPrice,
 		String? sessionId,
 		String? warningMessage,
+		String? storeId, // ✅ أضفنا هذا السطر
 	}) {
 		final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 		final newTotal = (unitPrice ?? this.unitPrice) != null && (quantity ?? this.quantity) != null
@@ -95,6 +98,7 @@ class CartItemModel {
 			warningMessage: warningMessage ?? this.warningMessage,
 			createdAt: this.createdAt,
 			updatedAt: now,
+			storeId: storeId ?? this.storeId, // ✅ أضفنا هذا السطر
 		);
 	}
 
@@ -113,10 +117,10 @@ class CartItemModel {
 			warningMessage: json['warning_message'],
 			createdAt: json['created_at'] ?? '',
 			updatedAt: json['updated_at'] ?? '',
+			storeId: json['store_id']?.toString(), // ✅ أضفنا هذا السطر
 		);
 	}
 
-	/// هذه الدالة تُستخدم عند الإرسال إلى API (POST/PUT)
 	Map<String, dynamic> toJsonForRequest() {
 		return {
 			'id': id,
@@ -132,9 +136,9 @@ class CartItemModel {
 			'warning_message': warningMessage,
 			'created_at': createdAt,
 			'updated_at': updatedAt,
+			'store_id': storeId, // ✅ أضفنا هذا السطر
 		};
 	}
 
-	/// هذه الدالة العامة إذا احتجت لكل الحقول
 	Map<String, dynamic> toJson() => toJsonForRequest();
 }

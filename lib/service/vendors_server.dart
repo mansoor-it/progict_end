@@ -8,7 +8,7 @@ import '../model/vendors_model.dart';
 
 class VendorService {
 	// تأكد من تعديل رابط API إذا لزم الأمر (مثلاً استخدام ملف API خاص بالبائعين "api_vendor.php")
-	static var url = Uri.parse('http://190.30.8.83/ecommerce/api_allvendors.php');
+	static var url = Uri.parse('http://190.30.24.218/ecommerce/api_allvendors.php');
 
 	static const _add = 'add';
 	static const _fetch = 'fetch';

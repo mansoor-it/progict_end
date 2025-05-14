@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart'; // ← يجب استيراد foundatio
 import 'package:http/http.dart' as http;
 import '../model/model_cart.dart';
 
-const String apiBaseUrl = "http://190.30.8.83/ecommerce/add_to_cart.php";
+const String apiBaseUrl = "http://190.30.24.218/ecommerce/add_to_cart.php";
 
 /// الآن يرث من ChangeNotifier ليعمل مع ChangeNotifierProvider
 class CartController extends ChangeNotifier {
@@ -143,24 +143,35 @@ class CartController extends ChangeNotifier {
 	}
 
 	/// دالة لإضافة عنصر إلى السلة باستخدام تفاصيل المنتج
+	/// دالة لإضافة عنصر إلى السلة باستخدام تفاصيل المنتج
 	Future<bool> addCartItem({
 		required String userId,
 		required String productId,
 		required String quantity,
 		required String unitPrice,
+		required String storeId, // ← تمت الإضافة هنا
 	}) async {
 		if (kDebugMode) {
-			print('>>> CartController.addCartItem args: userId=$userId, productId=$productId, quantity=$quantity, unitPrice=$unitPrice');
+			print('>>> CartController.addCartItem args: userId=$userId, productId=$productId, quantity=$quantity, unitPrice=$unitPrice, storeId=$storeId');
 		}
+
+		// تأكد من أن البيانات المرسلة صالحة قبل إرسالها
+		if (quantity == "0" || unitPrice == "0.00") {
+			throw Exception("الكمية أو السعر غير صحيح.");
+		}
+
 		final item = CartItemModel.create(
 			id: DateTime.now().millisecondsSinceEpoch.toString(),
 			userId: userId,
 			productId: productId,
 			quantity: quantity,
 			unitPrice: unitPrice,
+			storeId: storeId, // ← تمت الإضافة هنا
 		);
+
 		return await addToCart(item);
 	}
+
 
 	/// ✅ دالة لتأكيد الطلب
 	Future<bool> confirmOrder(String userId, List<CartItemModel> items) async {

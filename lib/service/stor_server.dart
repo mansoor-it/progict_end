@@ -1,22 +1,48 @@
-// controller/store_controller.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 import '../model/stor_model.dart';
 
-
 class StoreController {
-	final String apiUrl = "http://190.30.8.83/ecommerce/api.php";
+	final String baseUrl = "http://10.0.2.2/api/stores.php"; // غيّره حسب السيرفر
 
 	Future<List<Store>> fetchStores(String categoryId) async {
-		final response = await http.get(Uri.parse("$apiUrl?action=stores&category_id=$categoryId"));
+		final response = await http.post(Uri.parse(baseUrl), body: {
+			'action': 'fetch',
+			'category_id': categoryId,
+		});
+
 		if (response.statusCode == 200) {
-			final jsonResponse = json.decode(response.body);
-			if (jsonResponse['success'] == true) {
-				List data = jsonResponse['data'];
-				return data.map((item) => Store.fromJson(item)).toList();
-			}
+			final List data = json.decode(response.body);
+			return data.map((json) => Store.fromJson(json)).toList();
+		} else {
+			throw Exception("فشل في تحميل المحلات");
 		}
-		return [];
+	}
+
+	Future<bool> addStore(Store store) async {
+		final response = await http.post(Uri.parse(baseUrl), body: {
+			'action': 'add',
+			...store.toJson(),
+		});
+
+		return response.statusCode == 200;
+	}
+
+	Future<bool> updateStore(Store store) async {
+		final response = await http.post(Uri.parse(baseUrl), body: {
+			'action': 'update',
+			...store.toJson(),
+		});
+
+		return response.statusCode == 200;
+	}
+
+	Future<bool> deleteStore(String id) async {
+		final response = await http.post(Uri.parse(baseUrl), body: {
+			'action': 'delete',
+			'id': id,
+		});
+
+		return response.statusCode == 200;
 	}
 }

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../model/admin_model.dart';
 
 class AdminService {
-	static var url = Uri.parse('http://190.30.8.83/ecommerce/api_admin.php');
+	static var url = Uri.parse('http://192.168.43.129/ecommerce/api_admin.php');
 
 	static const _add = 'add';
 	static const _fetch = 'fetch';

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../model/category_model.dart';
 
 // رابط الـ API
-const String apiUrl = "http://190.30.8.83/ecommerce/api.php";
+const String apiUrl = "http://190.30.24.218/ecommerce/api.php";
 
 class CategoryController {
 	Future<List<Category>> fetchCategories() async {
@@ -28,4 +28,64 @@ class CategoryController {
 
 		return categories;
 	}
+	// إضافة قسم
+	Future<void> addCategory(Category category) async {
+		try {
+			final response = await http.post(
+				Uri.parse('$apiUrl?action=add_category'),
+				headers: {'Content-Type': 'application/json'},
+				body: json.encode(category.toJson()),
+			);
+
+			final jsonResponse = json.decode(response.body);
+			if (jsonResponse['success'] == true) {
+				print("✅ Success: ${jsonResponse['message']}");
+			} else {
+				print("❌ Error: ${jsonResponse['message']}");
+			}
+		} catch (e) {
+			print("❌ Exception during add: $e");
+		}
+	}
+
+// تعديل قسم
+	Future<void> updateCategory(Category category) async {
+		try {
+			final response = await http.post(
+				Uri.parse('$apiUrl?action=update_category'),
+				headers: {'Content-Type': 'application/json'},
+				body: json.encode(category.toJson()),
+			);
+
+			final jsonResponse = json.decode(response.body);
+			if (jsonResponse['success'] == true) {
+				print("✅ Success: ${jsonResponse['message']}");
+			} else {
+				print("❌ Error: ${jsonResponse['message']}");
+			}
+		} catch (e) {
+			print("❌ Exception during update: $e");
+		}
+	}
+
+// حذف قسم
+	Future<void> deleteCategory(String id) async {
+		try {
+			final response = await http.post(
+				Uri.parse('$apiUrl?action=delete_category'),
+				headers: {'Content-Type': 'application/json'},
+				body: json.encode({'id': id}),
+			);
+
+			final jsonResponse = json.decode(response.body);
+			if (jsonResponse['success'] == true) {
+				print("✅ Success: ${jsonResponse['message']}");
+			} else {
+				print("❌ Error: ${jsonResponse['message']}");
+			}
+		} catch (e) {
+			print("❌ Exception during delete: $e");
+		}
+	}
+
 }

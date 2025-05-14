@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../service/ProductDetailsPage_server.dart';
+import 'home.dart';
 import 'service/server_cart.dart';
 import 'viw/categories_screen.dart'; // الصفحة الرئيسية لديك
 
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.green,
       ),
-      home:  CategoriesScreen(),
+      home:  NavigationHomePage(),
     );
   }
 }

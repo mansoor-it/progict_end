@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../service/ProductDetailsPage_server.dart';
 import '../service/server_cart.dart';
-import 'cart_screen.dart';                // ← تأكد أن هذا المسار واسم الملف صحيح
+import 'cart_screen.dart';
 
 List<Map<String, dynamic>> cartItems = []; // قائمة السلة
 
@@ -71,7 +71,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
 									context,
 									MaterialPageRoute(
 										builder: (context) =>
-												CartPage(userId: '1', cartItems: cartItems), // ← استخدم CartScreen
+												CartPage(userId: '1', cartItems: cartItems),
 									),
 								);
 							},
@@ -103,38 +103,51 @@ class _AllProductsPageState extends State<AllProductsPage> {
 							productSizes: productSizes,
 							getColorFromName: getColorFromName,
 							onAddToCart: (itemMap) async {
-								final success = await _cartController.addCartItem(
-									userId: '1',
-									productId: itemMap['id'].toString(),
-									quantity: itemMap['quantity'].toString(),
-									unitPrice: itemMap['price'].toString(),
-								);
-								if (success) {
-									final existingIndex = cartItems.indexWhere(
-												(cartItem) =>
-										cartItem['id'] == itemMap['id'] &&
-												cartItem['color'] == itemMap['color'] &&
-												cartItem['size'] == itemMap['size'],
+								try {
+									// أضف الآن storeId إلى الطلب
+									final success =
+									await _cartController.addCartItem(
+										userId: '1',
+										storeId: widget.storeId,    // ← storeId هنا
+										productId: itemMap['id'].toString(),
+										quantity: itemMap['quantity'].toString(),
+										unitPrice: itemMap['price'].toString(),
 									);
-									if (existingIndex != -1) {
-										cartItems[existingIndex]['quantity'] +=
-										itemMap['quantity'];
-									} else {
-										cartItems.add(itemMap);
-									}
+									if (success) {
+										final existingIndex = cartItems.indexWhere(
+													(cartItem) =>
+											cartItem['id'] == itemMap['id'] &&
+													cartItem['color'] == itemMap['color'] &&
+													cartItem['size'] == itemMap['size'],
+										);
+										if (existingIndex != -1) {
+											cartItems[existingIndex]['quantity'] +=
+											itemMap['quantity'];
+										} else {
+											// خزن أيضًا storeId محليًا
+											cartItems.add({
+												...itemMap,
+												'store_id': widget.storeId,
+											});
+										}
 
+										ScaffoldMessenger.of(context).showSnackBar(
+											SnackBar(
+												content: Text(
+														"تمت إضافة ${itemMap['name']} من ${widget.storeName} إلى السلة"),
+											),
+										);
+									} else {
+										ScaffoldMessenger.of(context).showSnackBar(
+											const SnackBar(
+												content: Text(
+														"حدث خطأ أثناء إضافة المنتج إلى السلة"),
+											),
+										);
+									}
+								} catch (e) {
 									ScaffoldMessenger.of(context).showSnackBar(
-										SnackBar(
-											content: Text(
-													"تمت إضافة ${itemMap['name']} إلى السلة بنجاح"),
-										),
-									);
-								} else {
-									ScaffoldMessenger.of(context).showSnackBar(
-										const SnackBar(
-											content: Text(
-													"حدث خطأ أثناء إضافة المنتج إلى السلة"),
-										),
+										SnackBar(content: Text(e.toString())),
 									);
 								}
 							},

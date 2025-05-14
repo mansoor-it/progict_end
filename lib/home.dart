@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'controll/CategoryManagementPage.dart';
+import 'controll/ProductColorsManagementPage.dart';
+import 'controll/ProductSizesManagementPage.dart';
+import 'controll/ProductsPage.dart';
+import 'controll/StoreManagementPage.dart';
 import 'controll/admin_control.dart';
 import 'controll/aimg.dart';
 import 'controll/banners_control.dart';
@@ -23,6 +28,26 @@ class NavigationHomePage extends StatelessWidget {
 				children: [
 					_buildNavButton(
 						context,
+						label: 'ProductColorsManagementPage ',
+						page:  ProductColorsManagementPage(),
+					),
+					_buildNavButton(
+						context,
+						label: ' ProductSizesManagementPage',
+						page:  ProductSizesManagementPage(),
+					),
+					_buildNavButton(
+						context,
+						label: 'ProductsManagementPage',
+						page:  ProductsManagementPage(),
+					),
+					_buildNavButton(
+						context,
+						label: 'StoreManagementPage',
+						page:StoreManagementPage() ,
+					),
+					_buildNavButton(
+						context,
 						label: 'إدارة البائعين',
 						page: const VendorManagementPage(),
 					),
@@ -35,6 +60,11 @@ class NavigationHomePage extends StatelessWidget {
 						context,
 						label: 'إدارة البنرات',
 						page: const BannerManagementPage(),
+					),
+					_buildNavButton(
+						context,
+						label: 'إدارة الاقسام',
+						page:  CategoriesManagementScreen(),
 					),
 					_buildNavButton(
 						context,

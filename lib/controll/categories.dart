@@ -48,7 +48,7 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 	// دالة لجلب الفئات مع طباعة رسائل على الترمنال عند حدوث خطأ
 	Future<void> _fetchCategories() async {
 		final String apiUrl =
-				"http://190.30.1.230/ecommerce/categories.php?action=fetch";
+				"http://190.30.24.218/ecommerce/categories.php?action=fetch";
 		setState(() {
 			_isLoading = true;
 		});
@@ -104,7 +104,7 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 
 	// دالة لإضافة فئة جديدة مع طباعة رسائل التصحيح
 	Future<void> _addCategory() async {
-		final String apiUrl = "http://190.30.8.83/ecommerce/categories.php";
+		final String apiUrl = "http://190.30.24.218/ecommerce/categories.php";
 		final Map<String, String> data = {
 			"action": "add",
 			"name": _nameController.text.trim(),
@@ -347,7 +347,7 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 						leading: CircleAvatar(
 							radius: 24,
 							backgroundImage: NetworkImage(
-								"http://190.30.8.83/ecommerce/img_stores/${category.image}",
+								"http://190.30.24.218/ecommerce/img_stores/${category.image}",
 							),
 							backgroundColor: Colors.grey[200],
 						),

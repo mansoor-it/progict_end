@@ -5,7 +5,7 @@ import 'dart:convert';
 import '../model/stor_model.dart';
 
 class StoreService {
-	static const String baseUrl = "http://190.30.8.83/ecommerce/stores.php";
+	static const String baseUrl = "http://190.30.24.218/ecommerce/stores.php";
 
 	static Future<List<Store>> fetchStores() async {
 		final response = await http.get(Uri.parse("$baseUrl?action=fetch"));
