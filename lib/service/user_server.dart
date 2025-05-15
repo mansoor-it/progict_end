@@ -4,8 +4,11 @@ import '../ApiConfig.dart';
 import '../model/user_model.dart';
 
 class UserService {
+
 	//static var url = Uri.parse('http://190.30.24.218/ecommerce/api_user.php');
 	static final url = Uri.parse(ApiHelper.url('api_user.php'));
+
+
 	static const _add = 'add';
 	static const _fetch = 'fetch';
 	static const _update = 'update';

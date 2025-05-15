@@ -44,8 +44,11 @@ class ProductColorsManagementPage extends StatefulWidget {
 }
 
 class _ProductColorsManagementPageState extends State<ProductColorsManagementPage> {
+
 	//final String apiUrl = 'http://190.30.24.218/ecommerce/product_colors_api.php';
 	final String apiUrl = ApiHelper.url('product_colors_api.php');
+
+
 	final ImagePicker _picker = ImagePicker();
 
 	List<ProductColor> _colors = [];

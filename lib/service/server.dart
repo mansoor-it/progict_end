@@ -4,8 +4,11 @@ import '../ApiConfig.dart';
 import '../model/image.dart';
 
 class Services {
+
 	//static var url = Uri.parse('http://190.30.24.218/ecommerce/api_img.php');
 	static var url = Uri.parse(ApiHelper.url('api_img.php'));
+
+
 
 	// تغيرت أسماء الأفعال لتتوافق مع صفحة PHP الجديدة
 	static const _ADD_IMAGE_ACTION = 'add';

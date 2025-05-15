@@ -5,8 +5,10 @@ import '../model/banners_model.dart';
 
 class BannerService {
 	// تأكد من أن رابط السيرفر صحيح ويتوافق مع ملف PHP الخاص بالبـنـرات
+
 	//static const String apiUrl = 'http://190.30.24.218/ecommerce/apibanners.php';
 	static final apiUrl = ApiHelper.url('apibanners.php');
+
 	static const String _add = 'add';
 	static const String _fetch = 'fetch';
 	static const String _update = 'update';

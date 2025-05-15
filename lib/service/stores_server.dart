@@ -6,9 +6,11 @@ import '../ApiConfig.dart';
 import '../model/stor_model.dart';
 
 class StoreService {
+
 	//static const String baseUrl = "http://190.30.24.218/ecommerce/stores.php";
 
 	static var baseUrl = ApiHelper.url('stores.php');
+
 
 
 	static Future<List<Store>> fetchStores() async {

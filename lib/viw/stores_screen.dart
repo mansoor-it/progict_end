@@ -8,8 +8,10 @@ import '../model/stor_model.dart';
 import 'store_details_screen.dart';
 
 // رابط الـ API
+
 //const String apiUrl = "http://190.30.24.218/ecommerce/api.php";
 final String apiUrl = ApiHelper.url('api.php');
+
 
 class StoresScreen extends StatefulWidget {
 	final String categoryId;
