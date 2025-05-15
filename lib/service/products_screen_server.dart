@@ -1,10 +1,12 @@
 // products_screen_controller.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../ApiConfig.dart';
 import '../model/products_screen_model.dart';
 
 // رابط الـ API
-const String apiUrl = "http://190.30.24.218/ecommerce/api.php";
+//const String apiUrl = "http://190.30.24.218/ecommerce/api.php";
+final String apiUrl = ApiHelper.url('api.php');
 
 class ProductsScreenController {
 	Future<List<Product>> fetchProducts(String storeId) async {

@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-// تأكد من تعديل عنوان الـ API إذا لزم الأمر
-const String apiBaseUrl = "http://190.30.24.218/ecommerce/u.php";
+import '../ApiConfig.dart';
 
+// تأكد من تعديل عنوان الـ API إذا لزم الأمر
+//const String apiBaseUrl = "http://190.30.24.218/ecommerce/u.php";
+final String apiBaseUrl = ApiHelper.url('u.php');
 class AllProductsController {
 	Future<Map<String, dynamic>> fetchAllData(String storeId) async {
 		List<dynamic> products = [];

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
+import '../ApiConfig.dart';
+
 // تعريف كلاس المنتج بناءً على جدول products مع حقل الصورة بصيغة Base64
 class Product {
 	final String id;
@@ -51,7 +53,8 @@ class ProductsManagementPage extends StatefulWidget {
 }
 
 class _ProductsManagementPageState extends State<ProductsManagementPage> {
-	final String apiUrl = 'http://190.30.24.218/ecommerce/products_api.php';
+	//final String apiUrl = 'http://190.30.24.218/ecommerce/products_api.php';
+	final String apiUrl = ApiHelper.url('products_api.php');
 	final ImagePicker _picker = ImagePicker();
 
 	List<Product> _products = [];

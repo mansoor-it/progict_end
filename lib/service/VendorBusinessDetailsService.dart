@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../ApiConfig.dart';
 import '../model/VendorBusinessDetails_model.dart';
 
 class VendorBusinessDetailsService {
-	static var url = Uri.parse('http://190.30.24.218/ecommerce/api_allvendors.php');
-
+	//static var url = Uri.parse('http://190.30.24.218/ecommerce/api_allvendors.php');
+	static final url = Uri.parse(ApiHelper.url('api_allvendors.php'));
 	static const _add = 'add';
 	static const _fetch = 'fetch';
 	static const _update = 'update';

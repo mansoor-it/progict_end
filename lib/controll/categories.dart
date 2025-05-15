@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../ApiConfig.dart';
+
 class Category {
 	final String id;
 	final String name;
@@ -47,8 +49,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 
 	// دالة لجلب الفئات مع طباعة رسائل على الترمنال عند حدوث خطأ
 	Future<void> _fetchCategories() async {
-		final String apiUrl =
-				"http://190.30.24.218/ecommerce/categories.php?action=fetch";
+		//final String apiUrl ="http://190.30.24.218/ecommerce/categories.php?action=fetch";
+		final String apiUrl = ApiHelper.url('categories.php?action=fetch');
 		setState(() {
 			_isLoading = true;
 		});
@@ -104,7 +106,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 
 	// دالة لإضافة فئة جديدة مع طباعة رسائل التصحيح
 	Future<void> _addCategory() async {
-		final String apiUrl = "http://190.30.24.218/ecommerce/categories.php";
+		//final String apiUrl = "http://190.30.24.218/ecommerce/categories.php";
+		final String apiUrl = ApiHelper.url('categories.php');
 		final Map<String, String> data = {
 			"action": "add",
 			"name": _nameController.text.trim(),
@@ -156,7 +159,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 
 	// دالة لتعديل فئة موجودة مع طباعة رسائل التصحيح
 	Future<void> _updateCategory(String id) async {
-		final String apiUrl = "http://190.30.0.104/ecommerce/categories.php";
+		//final String apiUrl = "http://190.30.0.104/ecommerce/categories.php";
+		final String apiUrl = ApiHelper.url('categories.php');
 		final Map<String, String> data = {
 			"action": "update",
 			"id": id,
@@ -209,7 +213,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 
 	// دالة لحذف الفئة مع طباعة رسائل التصحيح
 	Future<void> _deleteCategory(String id) async {
-		final String apiUrl = "http://190.30.0.104/ecommerce/categories.php";
+		// final String apiUrl = "http://190.30.0.104/ecommerce/categories.php";
+		final String apiUrl = ApiHelper.url('categories.php');
 		final Map<String, String> data = {
 			"action": "delete",
 			"id": id,
@@ -347,7 +352,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 						leading: CircleAvatar(
 							radius: 24,
 							backgroundImage: NetworkImage(
-								"http://190.30.24.218/ecommerce/img_stores/${category.image}",
+							//	"http://190.30.24.218/ecommerce/img_stores/${category.image}",
+									 ApiHelper.url('img_stores.php${category.image}'),
 							),
 							backgroundColor: Colors.grey[200],
 						),

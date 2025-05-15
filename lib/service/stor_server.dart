@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../ApiConfig.dart';
 import '../model/stor_model.dart';
 
 class StoreController {
-	final String baseUrl = "http://10.0.2.2/api/stores.php"; // غيّره حسب السيرفر
+	//final String baseUrl = "http://10.0.2.2/api/stores.php"; // غيّره حسب السيرفر
+	static var baseUrl = ApiHelper.url('stores.php');
 
 	Future<List<Store>> fetchStores(String categoryId) async {
 		final response = await http.post(Uri.parse(baseUrl), body: {

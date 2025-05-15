@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../ApiConfig.dart';
 import '../model/vendors_model.dart';
 
 
@@ -8,8 +9,8 @@ import '../model/vendors_model.dart';
 
 class VendorService {
 	// تأكد من تعديل رابط API إذا لزم الأمر (مثلاً استخدام ملف API خاص بالبائعين "api_vendor.php")
-	static var url = Uri.parse('http://190.30.24.218/ecommerce/api_vendors_bank_details.php');
-
+	//static var url = Uri.parse('http://190.30.24.218/ecommerce/api_vendors_bank_details.php');
+	static final url = Uri.parse(ApiHelper.url('api_vendors_bank_details.php'));
 	static const _add = 'add';
 	static const _fetch = 'fetch';
 	static const _update = 'update';

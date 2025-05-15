@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../ApiConfig.dart';
 import '../model/admin_model.dart';
 
 class AdminService {
-	static var url = Uri.parse('http://192.168.43.129/ecommerce/api_admin.php');
-
+	//static var url = Uri.parse('http://192.168.43.129/ecommerce/api_admin.php');
+	static final url = Uri.parse(ApiHelper.url('api_admin.php'));
 	static const _add = 'add';
 	static const _fetch = 'fetch';
 	static const _update = 'update';

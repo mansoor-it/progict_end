@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../ApiConfig.dart';
 import '../model/stor_model.dart';
 
 class StoreService {
-	static const String baseUrl = "http://190.30.24.218/ecommerce/stores.php";
+	//static const String baseUrl = "http://190.30.24.218/ecommerce/stores.php";
+
+	static var baseUrl = ApiHelper.url('stores.php');
+
 
 	static Future<List<Store>> fetchStores() async {
 		final response = await http.get(Uri.parse("$baseUrl?action=fetch"));

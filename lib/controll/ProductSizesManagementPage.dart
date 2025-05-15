@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../ApiConfig.dart';
+
 // تعريف كلاس المقاسات بناءً على جدول product_sizes
 class ProductSize {
 	final String id;
@@ -48,7 +50,8 @@ class _ProductSizesManagementPageState extends State<ProductSizesManagementPage>
 	final TextEditingController _additionalPriceController = TextEditingController();
 
 	// رابط API الخاص بالمقاسات
-	final String apiUrl = "http://190.30.24.218/ecommerce/product_sizes_api.php";
+	//final String apiUrl = "http://190.30.24.218/ecommerce/product_sizes_api.php";
+	final String apiUrl = ApiHelper.url('product_sizes_api.php');
 
 	@override
 	void initState() {
