@@ -51,7 +51,7 @@ class ProductsManagementPage extends StatefulWidget {
 }
 
 class _ProductsManagementPageState extends State<ProductsManagementPage> {
-	final String apiUrl = 'http://190.30.24.218/ecommerce/products_api.php';
+	final String apiUrl = 'http://192.168.43.129/ecommerce/products_api.php';
 	final ImagePicker _picker = ImagePicker();
 
 	List<Product> _products = [];

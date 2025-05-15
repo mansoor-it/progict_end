@@ -48,7 +48,7 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 	// دالة لجلب الفئات مع طباعة رسائل على الترمنال عند حدوث خطأ
 	Future<void> _fetchCategories() async {
 		final String apiUrl =
-				"http://190.30.24.218/ecommerce/categories.php?action=fetch";
+				"http://192.168.43.129/ecommerce/categories.php?action=fetch";
 		setState(() {
 			_isLoading = true;
 		});

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 // تأكد من تعديل عنوان الـ API إذا لزم الأمر
-const String apiBaseUrl = "http://190.30.24.218/ecommerce/u.php";
+const String apiBaseUrl = "http://192.168.43.129/ecommerce/u.php";
 
 class AllProductsController {
 	Future<Map<String, dynamic>> fetchAllData(String storeId) async {

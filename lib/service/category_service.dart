@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../model/category_model.dart';
 
 // رابط الـ API
-const String apiUrl = "http://190.30.24.218/ecommerce/api.php";
+const String apiUrl = "http://192.168.43.129/ecommerce/api.php";
 
 class CategoryController {
 	Future<List<Category>> fetchCategories() async {

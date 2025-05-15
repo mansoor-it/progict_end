@@ -54,7 +54,7 @@ class StoreManagementPage extends StatefulWidget {
 }
 
 class _StoreManagementPageState extends State<StoreManagementPage> {
-	final String apiUrl = 'http://190.30.24.218/ecommerce/stores.php';
+	final String apiUrl = 'http://192.168.43.129/ecommerce/stores.php';
 	final ImagePicker _picker = ImagePicker();
 
 	List<Store> _stores = [];

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart'; // ← يجب استيراد foundatio
 import 'package:http/http.dart' as http;
 import '../model/model_cart.dart';
 
-const String apiBaseUrl = "http://190.30.24.218/ecommerce/add_to_cart.php";
+const String apiBaseUrl = "http://192.168.43.129/ecommerce/add_to_cart.php";
 
 /// الآن يرث من ChangeNotifier ليعمل مع ChangeNotifierProvider
 class CartController extends ChangeNotifier {

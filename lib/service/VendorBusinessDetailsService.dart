@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../model/VendorBusinessDetails_model.dart';
 
 class VendorBusinessDetailsService {
-	static var url = Uri.parse('http://190.30.24.218/ecommerce/api_allvendors.php');
+	static var url = Uri.parse('http://192.168.43.129/ecommerce/api_allvendors.php');
 
 	static const _add = 'add';
 	static const _fetch = 'fetch';

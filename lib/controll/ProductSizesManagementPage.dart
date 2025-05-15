@@ -48,7 +48,7 @@ class _ProductSizesManagementPageState extends State<ProductSizesManagementPage>
 	final TextEditingController _additionalPriceController = TextEditingController();
 
 	// رابط API الخاص بالمقاسات
-	final String apiUrl = "http://190.30.24.218/ecommerce/product_sizes_api.php";
+	final String apiUrl = "http://192.168.43.129/ecommerce/product_sizes_api.php";
 
 	@override
 	void initState() {
