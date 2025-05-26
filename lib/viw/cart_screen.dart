@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../model/model_cart.dart';
 import '../service/server_cart.dart';
@@ -110,23 +111,33 @@ class _CartPageState extends State<CartPage> {
 						itemCount: cartItems.length,
 						itemBuilder: (context, index) {
 							final item = cartItems[index];
+
+							Uint8List? imageBytes =
+							item['image'] != null ? base64Decode(item['image']) : null;
+
 							return Card(
 								margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
 								child: ListTile(
-									leading: const Icon(Icons.shopping_bag),
+									leading: imageBytes != null
+											? Image.memory(
+										imageBytes,
+										width: 50,
+										height: 50,
+										fit: BoxFit.cover,
+									)
+											: const Icon(Icons.image_not_supported, size: 50),
 									title: Text(item['name'] ?? ''),
 									subtitle: Column(
 										crossAxisAlignment: CrossAxisAlignment.start,
 										children: [
-											if (item['color'] != null)
-												Text('اللون: ${item['color']}'),
-											if (item['size'] != null)
-												Text('المقاس: ${item['size']}'),
+											if (item['color'] != null) Text('اللون: ${item['color']}'),
+											if (item['size'] != null) Text('المقاس: ${item['size']}'),
 											Text('الكمية: ${item['quantity']}'),
 											Text('السعر: \$${item['price']}'),
-											Text(
-												'الإجمالي: \$${(double.tryParse(item['price'].toString()) ?? 0.0) * (item['quantity'] ?? 1)}',
-											),
+											Text('الإجمالي: \$${
+													(double.tryParse(item['price'].toString()) ?? 0.0) *
+															(item['quantity'] ?? 1)
+											}'),
 										],
 									),
 									trailing: IconButton(
@@ -262,4 +273,6 @@ class _CartPageState extends State<CartPage> {
 			),
 		);
 	}
+
+
 }

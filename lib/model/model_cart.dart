@@ -6,7 +6,7 @@ class CartItemModel {
 	final String productId;
 	final String? productSizeId;
 	final String? productColorId;
-	final String? productImage;
+	final String? productImage; // ✅ يمكن أن تكون Base64 أو URL
 	final String unitPrice;
 	final String quantity;
 	final String totalPrice;
@@ -14,7 +14,7 @@ class CartItemModel {
 	final String? warningMessage;
 	final String createdAt;
 	final String updatedAt;
-	final String? storeId; // ✅ أضفنا هذا السطر
+	final String? storeId;
 
 	CartItemModel({
 		required this.id,
@@ -30,7 +30,7 @@ class CartItemModel {
 		this.warningMessage,
 		required this.createdAt,
 		required this.updatedAt,
-		this.storeId, // ✅ أضفنا هذا السطر
+		this.storeId,
 	});
 
 	factory CartItemModel.create({
@@ -44,10 +44,18 @@ class CartItemModel {
 		required String quantity,
 		String? sessionId,
 		String? warningMessage,
-		String? storeId, // ✅ أضفنا هذا السطر
+		String? storeId,
 	}) {
 		final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-		final total = double.parse(unitPrice) * int.parse(quantity);
+
+		// حساب الإجمالي
+		double total;
+		try {
+			total = double.parse(unitPrice) * int.parse(quantity);
+		} catch (e) {
+			total = 0.0;
+		}
+
 		return CartItemModel(
 			id: id,
 			userId: userId,
@@ -62,7 +70,7 @@ class CartItemModel {
 			warningMessage: warningMessage,
 			createdAt: now,
 			updatedAt: now,
-			storeId: storeId, // ✅ أضفنا هذا السطر
+			storeId: storeId,
 		);
 	}
 
@@ -78,12 +86,13 @@ class CartItemModel {
 		String? totalPrice,
 		String? sessionId,
 		String? warningMessage,
-		String? storeId, // ✅ أضفنا هذا السطر
+		String? storeId,
 	}) {
 		final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 		final newTotal = (unitPrice ?? this.unitPrice) != null && (quantity ?? this.quantity) != null
 				? (double.parse(unitPrice ?? this.unitPrice) * int.parse(quantity ?? this.quantity)).toStringAsFixed(2)
 				: this.totalPrice;
+
 		return CartItemModel(
 			id: id ?? this.id,
 			userId: userId ?? this.userId,
@@ -98,7 +107,7 @@ class CartItemModel {
 			warningMessage: warningMessage ?? this.warningMessage,
 			createdAt: this.createdAt,
 			updatedAt: now,
-			storeId: storeId ?? this.storeId, // ✅ أضفنا هذا السطر
+			storeId: storeId ?? this.storeId,
 		);
 	}
 
@@ -117,7 +126,7 @@ class CartItemModel {
 			warningMessage: json['warning_message'],
 			createdAt: json['created_at'] ?? '',
 			updatedAt: json['updated_at'] ?? '',
-			storeId: json['store_id']?.toString(), // ✅ أضفنا هذا السطر
+			storeId: json['store_id']?.toString(),
 		);
 	}
 
@@ -136,7 +145,7 @@ class CartItemModel {
 			'warning_message': warningMessage,
 			'created_at': createdAt,
 			'updated_at': updatedAt,
-			'store_id': storeId, // ✅ أضفنا هذا السطر
+			'store_id': storeId,
 		};
 	}
 

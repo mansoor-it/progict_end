@@ -333,6 +333,7 @@ class _ProductCardState extends State<ProductCard> {
 											'quantity': quantity,
 											'color': selectedColor,
 											'size': selectedSize,
+											'image': widget.product['image'], // ✅ إضافة الصورة
 										});
 									},
 									child: const Text("أضف إلى السلة"),
