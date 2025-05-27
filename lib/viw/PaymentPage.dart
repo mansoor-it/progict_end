@@ -1,24 +1,21 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../model/model_cart.dart';
-import '../model/orders_payments_model.dart';
-import '../service/orders_payments_server.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import '../model/model_cart.dart'; // نموذج السلة
 
 class PaymentPage extends StatefulWidget {
-	final String orderId;
 	final String userId;
 	final double totalAmount;
 	final List<CartItemModel> cartItems;
-	final Function(String) onPaymentSuccess;
+	final Function(String?) onPaymentSuccess; // ← تم تغييرها لتتقبل null
 
 	const PaymentPage({
 		Key? key,
-		required this.orderId,
 		required this.userId,
 		required this.totalAmount,
 		required this.cartItems,
-		required this.onPaymentSuccess,
+		required this.onPaymentSuccess, required String orderId,
 	}) : super(key: key);
 
 	@override
@@ -26,155 +23,192 @@ class PaymentPage extends StatefulWidget {
 }
 
 class _PaymentPageState extends State<PaymentPage> {
-	String _selectedPaymentMethod = 'credit_card';
-	final _accountName = 'منصور'; // اسم صاحب الحساب للتحويل البنكي
+	final String apiUrl = 'http://192.168.43.129/ecommerce/y.php';
 
-	Future<void> _processPayment() async {
-		try {
-			// إنشاء الطلب
-			final order = Order.create(
-				id: widget.orderId,
-				userId: widget.userId,
-				totalPrice: widget.totalAmount.toString(),
-				status: "pending",
-			);
+	String? selectedPaymentMethod;
 
-			final orderResult = await OrderPaymentService.addOrder(order);
-			final orderJson = json.decode(orderResult);
-			if (orderJson['success'] != true) throw Exception("فشل في إنشاء الطلب");
+	late TextEditingController recipientNameController;
+	late TextEditingController addressLine1Controller;
+	late TextEditingController addressLine2Controller;
+	late TextEditingController cityController;
+	late TextEditingController postalCodeController;
+	late TextEditingController countryController;
+	late TextEditingController phoneController;
 
-			// إضافة تفاصيل المنتجات
-			for (var item in widget.cartItems) {
-				final orderItem = OrderItem.create(
-					id: "${DateTime.now().millisecondsSinceEpoch}${item.productId}",
-					orderId: widget.orderId,
-					productId: item.productId,
-					productName: item.productId,
-					productImage: "",
-					quantity: item.quantity.toString(),
-					price: double.parse(item.unitPrice).toString(),
-				);
+	bool isLoading = false;
 
-				final itemResult = await OrderPaymentService.addOrderItem(orderItem);
-				final itemJson = json.decode(itemResult);
-				if (itemJson['success'] != true) throw Exception("فشل في إضافة تفاصيل الطلب");
-			}
+	@override
+	void initState() {
+		super.initState();
 
-			// تسجيل الدفع
-			final payment = Payment.create(
-				id: DateTime.now().toString(),
-				orderId: widget.orderId,
-				userId: widget.userId,
-				amount: widget.totalAmount.toString(),
-				paymentMethod: _selectedPaymentMethod,
-				status: "paid",
-			);
-
-			final paymentResult = await OrderPaymentService.addPayment(payment);
-			final paymentJson = json.decode(paymentResult);
-			if (paymentJson['success'] != true) throw Exception("فشل في تسجيل الدفع");
-
-			widget.onPaymentSuccess(widget.orderId);
-			ScaffoldMessenger.of(context).showSnackBar(
-				const SnackBar(content: Text('تم الدفع بنجاح')),
-			);
-			Navigator.pop(context);
-		} catch (e) {
-			ScaffoldMessenger.of(context).showSnackBar(
-				SnackBar(content: Text('حدث خطأ: $e')),
-			);
-		}
+		recipientNameController = TextEditingController(text: '');
+		addressLine1Controller = TextEditingController(text: '');
+		addressLine2Controller = TextEditingController(text: '');
+		cityController = TextEditingController(text: '');
+		postalCodeController = TextEditingController(text: '');
+		countryController = TextEditingController(text: 'السعودية');
+		phoneController = TextEditingController(text: '');
 	}
 
-	Widget _buildPaymentMethodSelector() {
-		return Column(
-			children: [
-				RadioListTile<String>(
-					title: const Text('بطاقة إئتمان'),
-					value: 'credit_card',
-					groupValue: _selectedPaymentMethod,
-					onChanged: (value) => setState(() => _selectedPaymentMethod = value!),
-				),
-				RadioListTile<String>(
-					title: const Text('الدفع عند الاستلام'),
-					value: 'cash_on_delivery',
-					groupValue: _selectedPaymentMethod,
-					onChanged: (value) => setState(() => _selectedPaymentMethod = value!),
-				),
-				RadioListTile<String>(
-					title: const Text('تحويل بنكي'),
-					value: 'bank_transfer',
-					groupValue: _selectedPaymentMethod,
-					onChanged: (value) => setState(() => _selectedPaymentMethod = value!),
-				),
-				if (_selectedPaymentMethod == 'bank_transfer')
-					Padding(
-						padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-						child: Column(
-							children: [
-								const Text('الرجاء التحويل إلى الحساب البنكي التالي:'),
-								Text(_accountName, style: const TextStyle(fontWeight: FontWeight.bold)),
-								const Text('IBAN: SA00 0000 0000 0000 0000 0000'),
-							],
-						),
-					),
-			],
-		);
+	@override
+	void dispose() {
+		recipientNameController.dispose();
+		addressLine1Controller.dispose();
+		addressLine2Controller.dispose();
+		cityController.dispose();
+		postalCodeController.dispose();
+		countryController.dispose();
+		phoneController.dispose();
+		super.dispose();
+	}
+
+	Future<void> submitOrder() async {
+		setState(() {
+			isLoading = true;
+		});
+
+		final items = widget.cartItems.map((item) {
+			return {
+				"product_id": item.productId,
+				"quantity": int.tryParse(item.quantity) ?? 1,
+				"price": double.tryParse(item.unitPrice) ?? 0.0,
+			};
+		}).toList();
+
+		final orderData = {
+			"user_id": widget.userId,
+			"total_price": widget.totalAmount.toStringAsFixed(2),
+			"items": items,
+			"payment": {
+				"amount": widget.totalAmount.toStringAsFixed(2),
+				"method": selectedPaymentMethod ?? "credit_card",
+				"status": "pending"
+			},
+			"shipping": {
+				"recipient_name": recipientNameController.text,
+				"address_line1": addressLine1Controller.text,
+				"address_line2": addressLine2Controller.text,
+				"city": cityController.text,
+				"postal_code": postalCodeController.text,
+				"country": countryController.text,
+				"phone": phoneController.text,
+				"notes": ""
+			}
+		};
+
+		try {
+			final response = await http.post(
+				Uri.parse(apiUrl),
+				headers: {'Content-Type': 'application/json'},
+				body: json.encode(orderData),
+			);
+
+			if (response.statusCode == 200) {
+				final responseData = json.decode(response.body);
+				if (responseData['success']) {
+					String? newOrderId = responseData['order_id'].toString(); // ← تم استلام الـ order_id من السيرفر
+					widget.onPaymentSuccess(newOrderId); // ← إرسال القيمة للمستخدم
+				} else {
+					ScaffoldMessenger.of(context).showSnackBar(
+						SnackBar(content: Text("فشل الطلب: ${responseData['message']}")),
+					);
+				}
+			} else {
+				ScaffoldMessenger.of(context).showSnackBar(
+					SnackBar(
+							content: Text("خطأ في الاتصال: ${response.statusCode}")),
+				);
+			}
+		} catch (e) {
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text("حدث خطأ أثناء إرسال الطلب: $e")),
+			);
+		}
+
+		setState(() {
+			isLoading = false;
+		});
 	}
 
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
-			appBar: AppBar(title: const Text('طرق الدفع')),
+			appBar: AppBar(
+				title: const Text('معلومات الدفع والشحن'),
+			),
 			body: Padding(
 				padding: const EdgeInsets.all(16.0),
-				child: Column(
-					crossAxisAlignment: CrossAxisAlignment.start,
+				child: ListView(
 					children: [
-						Card(
-							child: Padding(
-								padding: const EdgeInsets.all(12.0),
-								child: Column(
-									crossAxisAlignment: CrossAxisAlignment.start,
-									children: [
-										Text('رقم الطلب: ${widget.orderId}'),
-										Text('المبلغ الإجمالي: \$${widget.totalAmount.toStringAsFixed(2)}'),
-									],
-								),
-							),
+						Text(
+							'تقديم طلب جديد',
+							style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
 						),
-						const SizedBox(height: 20),
-						const Text('اختر طريقة الدفع:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-						_buildPaymentMethodSelector(),
-						const SizedBox(height: 20),
-						Expanded(
-							child: ListView.builder(
-								itemCount: widget.cartItems.length,
-								itemBuilder: (context, index) {
-									final item = widget.cartItems[index];
-									return ListTile(
-										title: Text('منتج: ${item.productId}'),
-										subtitle: Column(
-											crossAxisAlignment: CrossAxisAlignment.start,
-											children: [
-												Text('الكمية: ${item.quantity}'),
-												Text('السعر: ${item.unitPrice}'),
-											],
-										),
-									);
-								},
-							),
+						SizedBox(height: 16),
+
+						TextField(
+							controller: recipientNameController,
+							decoration: InputDecoration(labelText: 'اسم المستلم'),
 						),
-						SizedBox(
-							width: double.infinity,
-							child: ElevatedButton(
-								style: ElevatedButton.styleFrom(
-									padding: const EdgeInsets.symmetric(vertical: 15),
-								),
-								onPressed: _processPayment,
-								child: const Text('تأكيد الدفع', style: TextStyle(fontSize: 18)),
-							),
+
+						TextField(
+							controller: addressLine1Controller,
+							decoration: InputDecoration(labelText: 'العنوان الأول'),
 						),
+
+						TextField(
+							controller: addressLine2Controller,
+							decoration:
+							InputDecoration(labelText: 'العنوان الثاني (اختياري)'),
+						),
+
+						TextField(
+							controller: cityController,
+							decoration: InputDecoration(labelText: 'المدينة'),
+						),
+
+						TextField(
+							controller: postalCodeController,
+							decoration: InputDecoration(labelText: 'الرمز البريدي'),
+						),
+
+						TextField(
+							controller: countryController,
+							enabled: false,
+							decoration: InputDecoration(labelText: 'البلد'),
+						),
+
+						TextField(
+							controller: phoneController,
+							keyboardType: TextInputType.phone,
+							decoration: InputDecoration(labelText: 'رقم الهاتف'),
+						),
+
+						SizedBox(height: 16),
+
+						DropdownButtonFormField<String>(
+							value: selectedPaymentMethod ?? "credit_card",
+							items: [
+								DropdownMenuItem(value: "credit_card", child: Text("بطاقة ائتمانية")),
+								DropdownMenuItem(value: "paypal", child: Text("PayPal")),
+								DropdownMenuItem(value: "cash_on_delivery", child: Text("الدفع عند الاستلام")),
+							],
+							onChanged: (value) {
+								setState(() {
+									selectedPaymentMethod = value!;
+								});
+							},
+							decoration: InputDecoration(labelText: 'طريقة الدفع'),
+						),
+
+						SizedBox(height: 30),
+
+						ElevatedButton(
+							onPressed: isLoading ? null : submitOrder,
+							child: isLoading
+									? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white))
+									: Text('إرسال الطلب'),
+						)
 					],
 				),
 			),
