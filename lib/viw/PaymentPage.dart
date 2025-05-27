@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../ApiConfig.dart';
 import '../model/model_cart.dart'; // نموذج السلة
 
 class PaymentPage extends StatefulWidget {
@@ -23,7 +24,8 @@ class PaymentPage extends StatefulWidget {
 }
 
 class _PaymentPageState extends State<PaymentPage> {
-	final String apiUrl = 'http://192.168.43.129/ecommerce/y.php';
+//	final String apiUrl = 'http://192.168.43.129/ecommerce/y.php';
+	final String apiUrl = ApiHelper.url('y.php');
 
 	String? selectedPaymentMethod;
 

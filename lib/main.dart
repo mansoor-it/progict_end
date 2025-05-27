@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
       ),
       // توجيه المستخدم حسب حالة تسجيل الدخول
       home:CategoriesScreen() ,
-      ///home: isLoggedIn ? CategoriesScreen() : const LoginPage(),
+      ///home: isLoggedIn ? CategoriesScreen()MainDrawer : const LoginPage(),
     );
   }
 }
