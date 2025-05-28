@@ -11,6 +11,7 @@ final String apiUrl = ApiHelper.url('api.php');
 
 
 class ProductsScreenController {
+
 	Future<List<Product>> fetchProducts(String storeId) async {
 		final response = await http.get(Uri.parse("$apiUrl?action=products&store_id=$storeId"));
 		if (response.statusCode == 200) {

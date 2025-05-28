@@ -1,180 +1,201 @@
 import 'package:flutter/material.dart';
-
-// استيراد الشاشات التي تريد التنقل إليها
-import '../controll/OrderManagementPage.dart';
-import '../controll/ShippingManagementPage.dart';
-import 'PaymentPage.dart';
-import 'ProductDetailsPage.dart';
-import 'cart_screen.dart';
-import 'categories_screen.dart';
+import 'categories_screen.dart'; // ← استبدل بمسارك الصحيح
+import 'cart_screen.dart'; // ← استبدل بمسارك الصحيح
 import 'login.dart';
-import 'stores_screen.dart';
-import 'store_details_screen.dart';
-import 'products_screen.dart';
+// ← استبدل بمسارك الصحيح
+import 'products_screen.dart'; // ← استبدل بمسارك الصحيح
 
-
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
 	const HomePage({Key? key}) : super(key: key);
 
-	// قائمة العناصر التي ستظهر في الشبكة
-	// لكل عنصر: عنوان، و أيقونة، ودالة لإنشاء الشاشة (Widget)
-	List<_NavItem> get _navItems => [
-		_NavItem(
-			label: 'المتاجر',
-			iconData: Icons.store,
-			builder: () =>  StoresScreen(categoryId: '', categoryName: '',),
-		),
+	@override
+	_HomePageState createState() => _HomePageState();
+}
 
-		_NavItem(
-			label: 'الطلبات',
-			iconData: Icons.shopping_bag,
-			builder: () =>  OrderManagementPage(),
-		),
-		_NavItem(
-			label: 'جميع المنتجات',
-			iconData: Icons.list_alt,
-			builder: () => const AllProductsPage(storeId: '', storeName: '',),
-		),
-		_NavItem(
-			label: 'الشحن',
-			iconData: Icons.list_alt,
-			builder: () => const ShippingManagementPage(),
-		),
-		_NavItem(
-			label: 'الدفع',
-			iconData: Icons.payment,
-			builder: () => const PaymentPage(
-				amount: '0', // يمكنك تعديل القيم الافتراضية عند التنقل
-				userId: '0', orderId: '',
-			),
-		),
-		_NavItem(
-			label: 'تسجيل دخول',
-			iconData: Icons.login,
-			builder: () => const LoginPage(),
-		),
-		_NavItem(
-			label: 'الأقسام',
-			iconData: Icons.category,
-			builder: () =>  CategoriesScreen(),
-		),
-		_NavItem(
-			label: 'عربة التسوق',
-			iconData: Icons.shopping_cart,
-			builder: () => const CartPage(userId: '',),
-		),
+class _HomePageState extends State<HomePage> {
+	int _selectedIndex = 0;
+
+	final List<Widget> _pages = [
+		DashboardScreen(), // ← شاشة المحتوى الرئيسي
+		CategoriesScreen(), // ← الأقسام
+		CartPage(userId: "1", cartItems: []), // ← السلة
+		LoginPage(), // ← تسجيل الدخول
+		ProductsScreen(storeId: "1", storeName: "متجر العرض"), // ← المنتجات
 	];
+
+	void _onItemTapped(int index) {
+		setState(() {
+			_selectedIndex = index;
+		});
+	}
 
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
 			appBar: AppBar(
-				title: const Text(
-					'الصفحة الرئيسية',
-					style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-				),
-				centerTitle: true,
-				backgroundColor: Colors.blue.shade800,
-				elevation: 0,
+				title: const Text('متجرك'),
+				backgroundColor: Colors.teal,
+				elevation: 4,
+				actions: [
+					IconButton(
+						icon: const Icon(Icons.search),
+						onPressed: () {},
+					),
+					IconButton(
+						icon: const Icon(Icons.shopping_cart),
+						onPressed: () {
+							Navigator.push(
+								context,
+								MaterialPageRoute(
+									builder: (context) => CartPage(userId: "1", cartItems: []),
+								),
+							);
+						},
+					),
+				],
 			),
-			body: Container(
-				padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-				decoration: BoxDecoration(
-					gradient: LinearGradient(
-						colors: [
-							Colors.blue.shade50,
-							Colors.white,
-						],
-						begin: Alignment.topCenter,
-						end: Alignment.bottomCenter,
-					),
-				),
-				child: GridView.builder(
-					itemCount: _navItems.length,
-					gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-						crossAxisCount: 2,        // عمودين في كل صف
-						childAspectRatio: 1,      // نسبة العرض إلى الارتفاع متساوية
-						mainAxisSpacing: 16,      // المسافة عمودياً بين العناصر
-						crossAxisSpacing: 16,     // المسافة أفقياً بين العناصر
-					),
-					itemBuilder: (context, index) {
-						final item = _navItems[index];
-						return _NavCard(
-							label: item.label,
-							iconData: item.iconData,
+			drawer: Drawer(
+				backgroundColor: Colors.white,
+				child: ListView(
+					padding: EdgeInsets.zero,
+					children: <Widget>[
+						const DrawerHeader(
+							decoration: BoxDecoration(
+								color: Colors.teal,
+							),
+							child: Text(
+								'قائمة التنقل',
+								style: TextStyle(
+									color: Colors.white,
+									fontSize: 24,
+								),
+							),
+						),
+						ListTile(
+							leading: const Icon(Icons.home),
+							title: const Text('الرئيسية'),
+							selected: _selectedIndex == 0,
 							onTap: () {
-								Navigator.push(
-									context,
-									MaterialPageRoute(builder: (_) => item.builder()),
-								);
+								_onItemTapped(0);
+								Navigator.pop(context);
 							},
-						);
-					},
+						),
+						ListTile(
+							leading: const Icon(Icons.category),
+							title: const Text('الأقسام'),
+							selected: _selectedIndex == 1,
+							onTap: () {
+								_onItemTapped(1);
+								Navigator.pop(context);
+							},
+						),
+						ListTile(
+							leading: const Icon(Icons.shopping_cart),
+							title: const Text('السلة'),
+							selected: _selectedIndex == 2,
+							onTap: () {
+								_onItemTapped(2);
+								Navigator.pop(context);
+							},
+						),
+						ListTile(
+							leading: const Icon(Icons.person),
+							title: const Text('تسجيل الدخول'),
+							selected: _selectedIndex == 3,
+							onTap: () {
+								_onItemTapped(3);
+								Navigator.pop(context);
+							},
+						),
+						ListTile(
+							leading: const Icon(Icons.store),
+							title: const Text('المنتجات'),
+							selected: _selectedIndex == 4,
+							onTap: () {
+								_onItemTapped(4);
+								Navigator.pop(context);
+							},
+						),
+					],
 				),
+			),
+			body: _pages[_selectedIndex],
+			bottomNavigationBar: BottomNavigationBar(
+				currentIndex: _selectedIndex,
+				onTap: _onItemTapped,
+				type: BottomNavigationBarType.fixed,
+				backgroundColor: Colors.white,
+				selectedItemColor: Colors.teal,
+				unselectedItemColor: Colors.grey,
+				items: const [
+					BottomNavigationBarItem(icon: Icon(Icons.home), label: "الرئيسية"),
+					BottomNavigationBarItem(icon: Icon(Icons.category), label: "الأقسام"),
+					BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: "السلة"),
+					BottomNavigationBarItem(icon: Icon(Icons.person), label: "الحساب"),
+					BottomNavigationBarItem(icon: Icon(Icons.store), label: "المتاجر"),
+				],
 			),
 		);
 	}
 }
 
-/// نموذج بسيط لحفظ بيانات كل خيار تنقل
-class _NavItem {
-	final String label;
-	final IconData iconData;
-	final Widget Function() builder;
-
-	_NavItem({
-		required this.label,
-		required this.iconData,
-		required this.builder,
-	});
-}
-
-/// بطاقة تحتوي على أيقونة ونص، وعند الضغط تنتقل للشاشة المحدّدة
-class _NavCard extends StatelessWidget {
-	final String label;
-	final IconData iconData;
-	final VoidCallback onTap;
-
-	const _NavCard({
-		Key? key,
-		required this.label,
-		required this.iconData,
-		required this.onTap,
-	}) : super(key: key);
-
+// شاشة المحتوى الرئيسي (الرئيسية)
+class DashboardScreen extends StatelessWidget {
 	@override
 	Widget build(BuildContext context) {
-		return Card(
-			elevation: 6,
-			shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-			shadowColor: Colors.blue.shade100,
-			child: InkWell(
-				onTap: onTap,
-				borderRadius: BorderRadius.circular(12),
-				splashColor: Colors.blue.shade100,
-				child: Padding(
-					padding: const EdgeInsets.all(16.0),
-					child: Column(
-						mainAxisAlignment: MainAxisAlignment.center,
-						children: [
-							Icon(
-								iconData,
-								size: 48,
-								color: Colors.blue.shade800,
-							),
-							const SizedBox(height: 12),
-							Text(
-								label,
-								textAlign: TextAlign.center,
-								style: const TextStyle(
-									fontSize: 16,
-									fontWeight: FontWeight.w600,
-									color: Colors.black87,
-								),
-							),
-						],
+		return Padding(
+			padding: const EdgeInsets.all(16.0),
+			child: Column(
+				crossAxisAlignment: CrossAxisAlignment.start,
+				children: [
+					Text(
+						"مرحباً بك في متجرك",
+						style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+							fontWeight: FontWeight.bold,
+						),
 					),
-				),
+					const SizedBox(height: 16),
+					Container(
+						height: 200,
+						decoration: BoxDecoration(
+							color: Colors.grey[200],
+							borderRadius: BorderRadius.circular(12),
+						),
+						child: Center(
+							child: Text(
+								"عرض مميزات التطبيق هنا",
+								style: Theme.of(context).textTheme.titleMedium,
+							),
+						),
+					),
+					const SizedBox(height: 20),
+					Text(
+						"آخر التصنيفات",
+						style: Theme.of(context).textTheme.titleMedium?.copyWith(
+							fontWeight: FontWeight.bold,
+						),
+					),
+					const SizedBox(height: 12),
+					Expanded(
+						child: GridView.builder(
+							gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+								crossAxisCount: 3,
+								crossAxisSpacing: 10,
+								mainAxisSpacing: 10,
+							),
+							itemCount: 6,
+							itemBuilder: (context, index) {
+								return Container(
+									decoration: BoxDecoration(
+										color: Colors.teal.withOpacity(0.2),
+										borderRadius: BorderRadius.circular(8),
+									),
+									child: Center(child: Text("قسم $index")),
+								);
+							},
+						),
+					),
+				],
 			),
 		);
 	}

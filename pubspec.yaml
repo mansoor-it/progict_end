@@ -44,6 +44,9 @@ dependencies:
   shared_preferences: ^2.5.3
   paymob_payment: ^0.0.1+1
   google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+  flutter_staggered_animations: ^1.1.1
+  animate_gradient: ^0.0.3
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +72,7 @@ flutter:
   assets:
     - assets/logo.jpg
     - assets/m.png
+    - assets/store_banner.jpg
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
