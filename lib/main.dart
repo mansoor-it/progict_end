@@ -5,7 +5,13 @@ import 'package:untitled2/viw/AllProductsPage.dart';
 import 'package:untitled2/viw/hom.dart';
 import 'package:untitled2/viw/login.dart';
 import 'package:untitled2/viw/stores_all.dart';
+import 'controll/OrderDetailsManagementPage.dart';
+import 'controll/OrdersAndDetailsManagementPage.dart';
+
+import 'controll/PaymentsManagementPage.dart';
+import 'controll/ShippingManagementPage.dart';
 import 'controll/StoreManagementPage.dart';
+import 'controll/orders_management_page.dart';
 import 'home.dart';
 import 'service/server_cart.dart';
 import 'viw/categories_screen.dart'; // الصفحة الرئيسية
@@ -39,7 +45,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
       ),
       // توجيه المستخدم حسب حالة تسجيل الدخول
-      home:AllProductsPageNew() ,
+      home:ShippingDetailsPage(),
       ///home: isLoggedIn ? CategoriesScreen()MainDrawer : const LoginPage(),
     );
   }
