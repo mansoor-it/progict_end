@@ -7,6 +7,7 @@ import 'package:untitled2/viw/SignUpPage.dart';
 import 'package:untitled2/viw/hom.dart';
 import 'package:untitled2/viw/login.dart';
 import 'package:untitled2/viw/stores_all.dart';
+import 'Support or Help.dart';
 import 'controll/OrderDetailsManagementPage.dart';
 import 'controll/OrdersAndDetailsManagementPage.dart';
 
@@ -48,7 +49,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
       ),
       // توجيه المستخدم حسب حالة تسجيل الدخول
-      home:LoginPage(),
+      home:SupportPage(),
       ///home: isLoggedIn ? CategoriesScreen()MainDrawer : const LoginPage(),
     );
   }

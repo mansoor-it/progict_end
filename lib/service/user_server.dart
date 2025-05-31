@@ -35,6 +35,14 @@ class UserService {
 			return false;
 		}
 	}
+	static Future<User?> getUserByEmail(String email) async {
+		final users = await getAllUsers();
+		try {
+			return users.firstWhere((user) => user.email.toLowerCase() == email.toLowerCase());
+		} catch (e) {
+			return null; // لم يتم العثور على المستخدم
+		}
+	}
 
 	static Future<List<User>> getAllUsers() async {
 		try {

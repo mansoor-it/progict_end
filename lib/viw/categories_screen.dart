@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // استيراد SharedPreferences
+
 import '../model/category_model.dart';
 import 'package:untitled2/viw/stores_screen.dart';
 import '../service/category_service.dart';
+import 'login.dart';
 
 class CategoriesScreen extends StatefulWidget {
 	@override
@@ -16,11 +19,25 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 	bool isLoading = false;
 	final CategoryController _controller = CategoryController();
 	DisplayType _displayType = DisplayType.grid;
+	Category? selectedCategory;
+
+	// متغيرات لاسم المستخدم وصورته
+	String? username;
+	String? userImageBase64;
 
 	@override
 	void initState() {
 		super.initState();
+		fetchUserData(); // تحميل بيانات المستخدم من SharedPreferences
 		fetchCategories();
+	}
+
+	Future<void> fetchUserData() async {
+		final prefs = await SharedPreferences.getInstance();
+		setState(() {
+			username = prefs.getString('username') ?? 'مستخدم'; // قيمة افتراضية
+			userImageBase64 = prefs.getString('user_image_base64') ?? ''; // قد تكون فارغة
+		});
 	}
 
 	Future<void> fetchCategories() async {
@@ -32,18 +49,21 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 		});
 	}
 
+	Future<void> _logout(BuildContext context) async {
+		final prefs = await SharedPreferences.getInstance();
+		await prefs.clear();
+		Navigator.pushReplacement(
+			context,
+			MaterialPageRoute(builder: (context) => LoginPage()),
+		);
+	}
+
 	Widget _buildCategoryCard(Category category) {
 		return GestureDetector(
 			onTap: () {
-				Navigator.push(
-					context,
-					MaterialPageRoute(
-						builder: (context) => StoresScreen(
-							categoryId: category.id,
-							categoryName: category.name,
-						),
-					),
-				);
+				setState(() {
+					selectedCategory = category;
+				});
 			},
 			child: Card(
 				elevation: 8,
@@ -124,15 +144,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 				final category = categories[index];
 				return ListTile(
 					onTap: () {
-						Navigator.push(
-							context,
-							MaterialPageRoute(
-								builder: (_) => StoresScreen(
-									categoryId: category.id,
-									categoryName: category.name,
-								),
-							),
-						);
+						setState(() {
+							selectedCategory = category;
+						});
 					},
 					leading: category.image.isNotEmpty
 							? ClipRRect(
@@ -183,7 +197,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 		);
 	}
 
-	// Header جميل في بداية الصفحة
 	Widget _buildHeader() {
 		return Container(
 			padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -218,7 +231,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 		);
 	}
 
-	// Footer جميل في نهاية الصفحة
 	Widget _buildFooter() {
 		return Container(
 			padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -250,13 +262,68 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 		);
 	}
 
+	// ** اضافة الدروار (Drawer) **
+	Widget _buildDrawer() {
+		return Drawer(
+			child: Column(
+				children: [
+					UserAccountsDrawerHeader(
+						decoration: BoxDecoration(color: Theme.of(context).primaryColor),
+						accountName: Text(
+							username ?? 'مستخدم',
+							style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+						),
+						accountEmail: null,
+						currentAccountPicture: userImageBase64 != null && userImageBase64!.isNotEmpty
+								? CircleAvatar(
+							backgroundImage: MemoryImage(base64Decode(userImageBase64!)),
+						)
+								: CircleAvatar(
+							child: Icon(Icons.person, size: 40),
+						),
+					),
+					Expanded(
+						child: ListView.builder(
+							itemCount: categories.length,
+							itemBuilder: (context, index) {
+								final category = categories[index];
+								return ListTile(
+									leading: category.image.isNotEmpty
+											? CircleAvatar(
+										backgroundImage: MemoryImage(base64Decode(category.image)),
+									)
+											: Icon(Icons.image),
+									title: Text(category.name),
+									onTap: () {
+										setState(() {
+											selectedCategory = category;
+											Navigator.pop(context); // غلق القائمة بعد اختيار القسم
+										});
+									},
+								);
+							},
+						),
+					),
+				],
+			),
+		);
+	}
+
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
+			drawer: _buildDrawer(),  // إضافة الدروار هنا
 			backgroundColor: Colors.grey[200],
 			appBar: AppBar(
 				title: Text("الأقسام"),
 				backgroundColor: Theme.of(context).primaryColor,
+				leading: Builder(
+					builder: (context) => IconButton(
+						icon: Icon(Icons.menu),
+						onPressed: () => Scaffold.of(context).openDrawer(),
+						tooltip: 'القائمة',
+					),
+				),
 				actions: [
 					IconButton(
 						icon: Icon(Icons.grid_view),
@@ -273,29 +340,46 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 						color: _displayType == DisplayType.horizontal ? Colors.white : Colors.white60,
 						onPressed: () => setState(() => _displayType = DisplayType.horizontal),
 					),
+
+					// زر تسجيل الخروج
+					IconButton(
+						icon: Icon(Icons.logout),
+						tooltip: 'تسجيل خروج',
+						onPressed: () {
+							_logout(context);
+						},
+					),
 				],
 			),
-			body: Column(
+			body: Row(
 				children: [
-					_buildHeader(),
 					Expanded(
-						child: isLoading
-								? Center(child: CircularProgressIndicator())
-								: Builder(
-							builder: (_) {
-								switch (_displayType) {
-									case DisplayType.list:
-										return _buildListView();
-									case DisplayType.horizontal:
-										return _buildHorizontalView();
-									case DisplayType.grid:
-									default:
-										return _buildGridView();
-								}
-							},
+						flex: 2,
+						child: Column(
+							children: [
+								_buildHeader(),
+								Expanded(
+									child: isLoading
+											? Center(child: CircularProgressIndicator())
+											: _displayType == DisplayType.grid
+											? _buildGridView()
+											: _displayType == DisplayType.list
+											? _buildListView()
+											: _buildHorizontalView(),
+								),
+								_buildFooter(),
+							],
 						),
 					),
-					_buildFooter(),
+					if (selectedCategory != null)
+						Expanded(
+							flex: 3,
+							child: StoresScreen(
+								categoryId: selectedCategory!.id,
+								categoryName: selectedCategory!.name,
+							),
+
+						),
 				],
 			),
 		);

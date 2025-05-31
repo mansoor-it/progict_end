@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../HomeDrawerScaffold.dart';
 import '../model/user_model.dart';
 import '../service/user_server.dart';
 import 'SignUpPage.dart';
-import 'categories_screen.dart';
 
 class LoginPage extends StatefulWidget {
 	const LoginPage({super.key});
@@ -30,13 +30,14 @@ class _LoginPageState extends State<LoginPage> {
 
 	Future<void> _checkSavedLogin() async {
 		SharedPreferences prefs = await SharedPreferences.getInstance();
-		String? savedEmail = prefs.getString('email');
-		String? savedPassword = prefs.getString('password');
+		String? email = prefs.getString('email');
+		String? accessToken = prefs.getString('access_token');
 
-		if (savedEmail != null && savedPassword != null) {
+		if (email != null && accessToken != null) {
 			setState(() => _isLoading = true);
-			final user = await UserService.loginUser(savedEmail, savedPassword);
-			if (user != null) {
+
+			final user = await UserService.getUserByEmail(email);
+			if (user != null && user.accessToken == accessToken && user.status == 'active') {
 				_goToHome(user);
 			} else {
 				setState(() => _isLoading = false);
@@ -44,7 +45,41 @@ class _LoginPageState extends State<LoginPage> {
 		}
 	}
 
+	Future<void> _saveUserDataToPrefs(User user) async {
+		SharedPreferences prefs = await SharedPreferences.getInstance();
+		await prefs.setString('id', user.id);
+		await prefs.setString('name', user.name);
+		await prefs.setString('mobile', user.mobile ?? '');
+		await prefs.setString('email', user.email);
+		await prefs.setString('email_verified_at', user.emailVerifiedAt ?? '');
+		await prefs.setString('password', user.password);
+		await prefs.setString('image', user.image ?? '');
+		await prefs.setString('status', user.status);
+		await prefs.setString('remember_token', user.rememberToken ?? '');
+		await prefs.setString('access_token', user.accessToken ?? '');
+		await prefs.setString('created_at', user.createdAt ?? '');
+		await prefs.setString('updated_at', user.updatedAt ?? '');
+	}
+
+	Future<void> _showMessageDialog(String title, String message, {bool isError = false}) async {
+		return showDialog(
+			context: context,
+			builder: (_) => AlertDialog(
+				title: Text(title, style: TextStyle(color: isError ? Colors.red : Colors.green)),
+				content: Text(message),
+				actions: [
+					TextButton(
+						onPressed: () => Navigator.of(context).pop(),
+						child: const Text('حسناً'),
+					),
+				],
+			),
+		);
+	}
+
 	Future<void> _login() async {
+		FocusScope.of(context).unfocus();
+
 		if (!_formKey.currentState!.validate()) return;
 
 		setState(() {
@@ -59,11 +94,22 @@ class _LoginPageState extends State<LoginPage> {
 			final user = await UserService.loginUser(email, password);
 
 			if (user != null) {
-				SharedPreferences prefs = await SharedPreferences.getInstance();
-				await prefs.setString('email', email);
-				await prefs.setString('password', password);
+				if (user.status != 'active') {
+					setState(() {
+						_errorMessage = '(733494291)الحساب غير مفعل، يرجى التواصل مع الإدارة';
+						_isLoading = false;
+					});
+					return;
+				}
 
-				_showSuccessDialog(user);
+				await _saveUserDataToPrefs(user);
+
+				SharedPreferences prefs = await SharedPreferences.getInstance();
+				await prefs.setString('login_method', 'manual');
+
+				await _showMessageDialog('نجاح', 'تم تسجيل الدخول بنجاح');
+
+				_goToHome(user);
 			} else {
 				setState(() {
 					_errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
@@ -71,109 +117,85 @@ class _LoginPageState extends State<LoginPage> {
 			}
 		} catch (e) {
 			setState(() {
-				_errorMessage = 'حدث خطأ أثناء تسجيل الدخول';
+				_errorMessage = e.toString().contains('SocketException')
+						? 'تحقق من اتصال الإنترنت'
+						: 'حدث خطأ أثناء تسجيل الدخول';
 			});
 		} finally {
-			setState(() {
-				_isLoading = false;
-			});
+			setState(() => _isLoading = false);
 		}
 	}
 
 	Future<void> _loginWithGoogle() async {
 		try {
-			print('🔄 بدء تسجيل الدخول عبر Google...');
 			final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
 			if (googleUser == null) {
-				print('❌ تم إلغاء تسجيل الدخول من قبل المستخدم.');
-				setState(() {
-					_errorMessage = 'تم إلغاء تسجيل الدخول من قبل المستخدم';
-				});
+				setState(() => _errorMessage = 'تم إلغاء تسجيل الدخول من قبل المستخدم');
 				return;
 			}
 
 			final String email = googleUser.email;
 			final String name = googleUser.displayName ?? 'مستخدم Google';
 			final String id = googleUser.id;
+			final String photoUrl = googleUser.photoUrl ?? '';
+			const defaultPassword = 'google_default_password';
 
-			print('✅ تسجيل الدخول عبر Google ناجح');
-			print('📧 البريد الإلكتروني: $email');
-			print('👤 الاسم: $name');
-			print('🆔 المعرف: $id');
-
-			final defaultPassword = 'google_default_password';
-
-			// تسجيل الدخول للتحقق مما إذا كان المستخدم موجوداً
 			final existingUser = await UserService.loginUser(email, defaultPassword);
-
 			User user;
 
 			if (existingUser != null) {
-				print('👤 تم العثور على المستخدم في قاعدة البيانات');
 				user = existingUser;
 			} else {
-				// إذا لم يكن موجوداً، يتم إنشاؤه
 				user = User(
 					id: id,
 					name: name,
 					email: email,
 					password: defaultPassword,
 					mobile: '',
-					image: '',
-					status: '',
+					image: photoUrl,
+					status: 'active',
+					emailVerifiedAt: '',
+					rememberToken: '',
+					accessToken: 'google_token_${DateTime.now().millisecondsSinceEpoch}',
+					createdAt: DateTime.now().toIso8601String(),
+					updatedAt: DateTime.now().toIso8601String(),
 				);
 				await UserService.registerUser(user);
-				print('🆕 تم إنشاء مستخدم جديد في قاعدة البيانات عبر Google');
 			}
 
-			// حفظ البيانات
+			if (user.status != 'active') {
+				setState(() => _errorMessage = 'الحساب غير مفعل، يرجى التواصل مع الإدارة');
+				return;
+			}
+
+			await _saveUserDataToPrefs(user);
+
 			SharedPreferences prefs = await SharedPreferences.getInstance();
-			await prefs.setString('email', email);
-			await prefs.setString('password', defaultPassword);
 			await prefs.setString('login_method', 'google');
 
-			_showSuccessDialog(user);
-		} catch (error, stackTrace) {
-			print('🚫 فشل تسجيل الدخول عبر Google: $error');
-			print('📛 Stack Trace:\n$stackTrace');
+			await _showMessageDialog('نجاح', 'تم تسجيل الدخول بنجاح');
+
+			_goToHome(user);
+		} catch (e) {
 			setState(() {
-				_errorMessage = 'فشل تسجيل الدخول عبر Google: $error';
+				_errorMessage = e.toString().contains('SocketException')
+						? 'تحقق من اتصال الإنترنت'
+						: 'فشل تسجيل الدخول عبر Google';
 			});
 		}
 	}
 
-
-
-	void _showSuccessDialog(User user) {
-		showDialog(
-			context: context,
-			builder: (_) => AlertDialog(
-				title: Text('مرحبًا ${user.name}'),
-				content: const Text('تم تسجيل الدخول بنجاح'),
-				actions: [
-					TextButton(
-						onPressed: () {
-							Navigator.of(context).pop();
-							_goToHome(user);
-						},
-						child: const Text('متابعة'),
-					)
-				],
-			),
-		);
-	}
-
 	void _goToHome(User user) {
 		Navigator.of(context).pushReplacement(
-			MaterialPageRoute(builder: (_) =>  CategoriesScreen()),
+			MaterialPageRoute(builder: (_) => HomeDrawerScaffold()),
 		);
 	}
 
 	void _goToRegister() {
 		Navigator.push(
 			context,
-			MaterialPageRoute(builder: (_) =>  SignUpPage()),
+			MaterialPageRoute(builder: (_) => const SignUpPage()),
 		);
 	}
 
@@ -184,8 +206,17 @@ class _LoginPageState extends State<LoginPage> {
 				title: const Text('نسيت كلمة المرور؟'),
 				content: const Text('سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'),
 				actions: [
-					TextButton(onPressed: Navigator.of(context).pop, child: const Text('إلغاء')),
-					TextButton(onPressed: () {}, child: const Text('إرسال')),
+					TextButton(
+						onPressed: () => Navigator.of(context).pop(),
+						child: const Text('إلغاء'),
+					),
+					TextButton(
+						onPressed: () {
+							Navigator.of(context).pop();
+							_showMessageDialog('تم', 'تم إرسال رابط إعادة تعيين كلمة المرور');
+						},
+						child: const Text('إرسال'),
+					),
 				],
 			),
 		);
@@ -198,10 +229,12 @@ class _LoginPageState extends State<LoginPage> {
 		bool obscure = false,
 		Widget? suffixIcon,
 		String? Function(String?)? validator,
+		TextInputType? keyboardType,
 	}) {
 		return TextFormField(
 			controller: controller,
 			obscureText: obscure,
+			keyboardType: keyboardType,
 			decoration: InputDecoration(
 				labelText: label,
 				prefixIcon: Icon(icon),
@@ -209,6 +242,7 @@ class _LoginPageState extends State<LoginPage> {
 				border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
 			),
 			validator: validator,
+			textInputAction: TextInputAction.next,
 		);
 	}
 
@@ -232,7 +266,9 @@ class _LoginPageState extends State<LoginPage> {
 								label: 'البريد الإلكتروني',
 								icon: Icons.email,
 								controller: _emailController,
-								validator: (value) => value!.isEmpty ? 'أدخل البريد الإلكتروني' : null,
+								keyboardType: TextInputType.emailAddress,
+								validator: (value) =>
+								value == null || value.isEmpty ? 'أدخل البريد الإلكتروني' : null,
 							),
 							const SizedBox(height: 15),
 							_buildTextInput(
@@ -244,7 +280,8 @@ class _LoginPageState extends State<LoginPage> {
 									icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
 									onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
 								),
-								validator: (value) => value!.isEmpty ? 'أدخل كلمة المرور' : null,
+								validator: (value) =>
+								value == null || value.isEmpty ? 'أدخل كلمة المرور' : null,
 							),
 							Align(
 								alignment: Alignment.centerLeft,
@@ -254,24 +291,64 @@ class _LoginPageState extends State<LoginPage> {
 								),
 							),
 							if (_errorMessage != null)
-								Text(
-									_errorMessage!,
-									style: const TextStyle(color: Colors.red),
+								Padding(
+									padding: const EdgeInsets.symmetric(vertical: 10),
+									child: Text(
+										_errorMessage!,
+										style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+									),
 								),
-							const SizedBox(height: 20),
-							ElevatedButton(
-								onPressed: _isLoading ? null : _login,
-								child: _isLoading
-										? const CircularProgressIndicator()
-										: const Text('تسجيل الدخول'),
+							const SizedBox(height: 10),
+							SizedBox(
+								width: double.infinity,
+								height: 50,
+								child: ElevatedButton(
+									onPressed: _isLoading ? null : _login,
+									style: ElevatedButton.styleFrom(
+										backgroundColor: Colors.brown,
+										shape: RoundedRectangleBorder(
+											borderRadius: BorderRadius.circular(10),
+										),
+									),
+									child: _isLoading
+											? const Row(
+										mainAxisSize: MainAxisSize.min,
+										children: [
+											SizedBox(
+												width: 20,
+												height: 20,
+												child: CircularProgressIndicator(
+													color: Colors.white,
+													strokeWidth: 2,
+												),
+											),
+											SizedBox(width: 10),
+											Text('جارٍ تسجيل الدخول...'),
+										],
+									)
+											: const Text(
+										'تسجيل الدخول',
+										style: TextStyle(fontSize: 18),
+									),
+								),
 							),
 							const SizedBox(height: 15),
-							OutlinedButton.icon(
-								onPressed: _loginWithGoogle,
-								icon: Image.asset('assets/m.png', height: 24),
-								label: const Text('تسجيل الدخول عبر Google'),
+							SizedBox(
+								width: double.infinity,
+								height: 50,
+								child: OutlinedButton.icon(
+									onPressed: _loginWithGoogle,
+									icon: Image.asset('assets/m.png', height: 24),
+									label: const Text('تسجيل الدخول عبر Google'),
+									style: OutlinedButton.styleFrom(
+										shape: RoundedRectangleBorder(
+											borderRadius: BorderRadius.circular(10),
+										),
+										side: const BorderSide(color: Colors.brown),
+									),
+								),
 							),
-							const SizedBox(height: 10),
+							const SizedBox(height: 15),
 							TextButton(
 								onPressed: _goToRegister,
 								child: const Text('ليس لديك حساب؟ سجل الآن'),
