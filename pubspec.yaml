@@ -48,6 +48,7 @@ dependencies:
   flutter_staggered_animations: ^1.1.1
   animate_gradient: ^0.0.3
   carousel_slider: ^5.0.0
+  google_sign_in: ^6.3.0
 
 dev_dependencies:
   flutter_test:

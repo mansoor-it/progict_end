@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../ApiConfig.dart';
+
 class MostOrderedProductsPage extends StatefulWidget {
 	const MostOrderedProductsPage({super.key});
 
@@ -27,8 +29,9 @@ class _MostOrderedProductsPageState extends State<MostOrderedProductsPage> {
 		});
 
 		try {
-			const String url = 'http://190.30.1.222/ecommerce/get_most_ordered_products.php';
-			final response = await http.get(Uri.parse(url));
+			//const String url = '"http://172.25.30.9/ecommerce/get_most_ordered_products.php';
+			final url = Uri.parse(ApiHelper.url('get_most_ordered_products.php'));
+			final response = await http.get(url);
 
 			if (response.statusCode == 200) {
 				final data = jsonDecode(response.body);

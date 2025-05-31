@@ -2,15 +2,24 @@ import 'package:flutter/material.dart';
 
 // استيراد الصفحات
 import 'controll/CategoryManagementPage.dart';
+import 'controll/OrderDetailsManagementPage.dart';
 import 'controll/ProductColorsManagementPage.dart';
 import 'controll/ProductSizesManagementPage.dart';
 import 'controll/ProductsPage.dart';
+import 'controll/ShippingManagementPage.dart';
 import 'controll/StoreManagementPage.dart';
 import 'controll/admin_control.dart';
 import 'controll/aimg.dart';
 import 'controll/banners_control.dart';
+import 'controll/orders_management_page.dart';
 import 'controll/user_control.dart';
 import 'controll/vendors_control.dart';
+
+// استيراد الصفحات الجديدة
+
+import 'controll/PaymentsManagementPage.dart';
+import 'controll/OrdersAndDetailsManagementPage.dart';
+
 
 void main() {
 	runApp(const MyApp());
@@ -25,7 +34,7 @@ class MyApp extends StatelessWidget {
 			title: 'لوحة التحكم',
 			theme: ThemeData(
 				primarySwatch: Colors.blue,
-				fontFamily: 'Tajawal', // يمكنك استخدام خط عربي
+				fontFamily: 'Tajawal',
 			),
 			debugShowCheckedModeBanner: false,
 			home: const NavigationHomePage(),
@@ -45,35 +54,35 @@ class _NavigationHomePageState extends State<NavigationHomePage> {
 		NavMenuItem(
 			label: 'إدارة الألوان',
 			icon: Icons.color_lens,
-			page:  ProductColorsManagementPage(),
+			page: ProductColorsManagementPage(),
 			category: 'products',
 			color: Colors.purple,
 		),
 		NavMenuItem(
 			label: 'إدارة المقاسات',
 			icon: Icons.straighten,
-			page:  ProductSizesManagementPage(),
+			page: ProductSizesManagementPage(),
 			category: 'products',
 			color: Colors.blue,
 		),
 		NavMenuItem(
 			label: 'إدارة المنتجات',
 			icon: Icons.shopping_cart,
-			page:  ProductsManagementPage(),
+			page: ProductsManagementPage(),
 			category: 'products',
 			color: Colors.green,
 		),
 		NavMenuItem(
 			label: 'إدارة المتجر',
 			icon: Icons.store,
-			page:  StoreManagementPage(),
+			page: StoreManagementPage(),
 			category: 'store',
 			color: Colors.orange,
 		),
 		NavMenuItem(
 			label: 'إدارة الأقسام',
 			icon: Icons.category,
-			page:  CategoriesManagementScreen(),
+			page: CategoriesManagementScreen(),
 			category: 'store',
 			color: Colors.red,
 		),
@@ -112,6 +121,42 @@ class _NavigationHomePageState extends State<NavigationHomePage> {
 			category: 'settings',
 			color: Colors.blueGrey,
 		),
+		// الصفحات الجديدة
+		NavMenuItem(
+			label: 'تفاصيل الشحن',
+			icon: Icons.local_shipping,
+			page: ShippingDetailsPage(),
+			category: 'orders',
+			color: Colors.brown,
+		),
+		NavMenuItem(
+			label: 'إدارة المدفوعات',
+			icon: Icons.payment,
+			page: PaymentsManagementPage(),
+			category: 'orders',
+			color: Colors.deepPurple,
+		),
+		NavMenuItem(
+			label: 'إدارة الطلبات والتفاصيل',
+			icon: Icons.list_alt,
+			page: OrdersAndDetailsManagementPage(),
+			category: 'orders',
+			color: Colors.amber,
+		),
+		NavMenuItem(
+			label: 'إدارة الطلبات',
+			icon: Icons.shopping_basket,
+			page: OrdersManagementPage(),
+			category: 'orders',
+			color: Colors.lightBlue,
+		),
+		NavMenuItem(
+			label: 'تفاصيل الطلب',
+			icon: Icons.receipt_long,
+			page: OrderDetailManagementPage(),
+			category: 'orders',
+			color: Colors.pink,
+		),
 	];
 
 	List<NavMenuItem> displayedItems = [];
@@ -135,7 +180,7 @@ class _NavigationHomePageState extends State<NavigationHomePage> {
 	@override
 	Widget build(BuildContext context) {
 		return DefaultTabController(
-			length: 4,
+			length: 5, // تم زيادة طول التبويب
 			child: Scaffold(
 				appBar: AppBar(
 					title: const Text('لوحة التحكم الإدارية'),
@@ -199,11 +244,12 @@ class _NavigationHomePageState extends State<NavigationHomePage> {
 						),
 					],
 					bottom: _viewMode == 2
-							? const TabBar(
+							? TabBar(
 						tabs: [
 							Tab(text: "المنتجات", icon: Icon(Icons.shopping_bag)),
 							Tab(text: "المتجر", icon: Icon(Icons.store)),
 							Tab(text: "المستخدمين", icon: Icon(Icons.people)),
+							Tab(text: "الطلبات", icon: Icon(Icons.shopping_cart)), // تبويب جديد
 							Tab(text: "الإعدادات", icon: Icon(Icons.settings)),
 						],
 					)
@@ -243,6 +289,7 @@ class _NavigationHomePageState extends State<NavigationHomePage> {
 				_buildCategoryView('products'),
 				_buildCategoryView('store'),
 				_buildCategoryView('users'),
+				_buildCategoryView('orders'), // تبويب الطلبات الجديد
 				_buildCategoryView('settings'),
 			],
 		);

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../home.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../model/user_model.dart';
 import '../service/user_server.dart';
+import 'SignUpPage.dart';
 import 'categories_screen.dart';
 
 class LoginPage extends StatefulWidget {
@@ -15,11 +18,33 @@ class _LoginPageState extends State<LoginPage> {
 	final _formKey = GlobalKey<FormState>();
 	final _emailController = TextEditingController();
 	final _passwordController = TextEditingController();
-
 	bool _isLoading = false;
+	bool _obscurePassword = true;
 	String? _errorMessage;
 
-	void _login() async {
+	@override
+	void initState() {
+		super.initState();
+		_checkSavedLogin();
+	}
+
+	Future<void> _checkSavedLogin() async {
+		SharedPreferences prefs = await SharedPreferences.getInstance();
+		String? savedEmail = prefs.getString('email');
+		String? savedPassword = prefs.getString('password');
+
+		if (savedEmail != null && savedPassword != null) {
+			setState(() => _isLoading = true);
+			final user = await UserService.loginUser(savedEmail, savedPassword);
+			if (user != null) {
+				_goToHome(user);
+			} else {
+				setState(() => _isLoading = false);
+			}
+		}
+	}
+
+	Future<void> _login() async {
 		if (!_formKey.currentState!.validate()) return;
 
 		setState(() {
@@ -27,192 +52,233 @@ class _LoginPageState extends State<LoginPage> {
 			_errorMessage = null;
 		});
 
-		final email = _emailController.text.trim();
-		final password = _passwordController.text.trim();
+		try {
+			final email = _emailController.text.trim();
+			final password = _passwordController.text.trim();
 
-		final user = await UserService.loginUser(email, password);
+			final user = await UserService.loginUser(email, password);
 
-		setState(() {
-			_isLoading = false;
-		});
+			if (user != null) {
+				SharedPreferences prefs = await SharedPreferences.getInstance();
+				await prefs.setString('email', email);
+				await prefs.setString('password', password);
 
-		if (user != null) {
-			// نجاح تسجيل الدخول
-			showDialog(
-				context: context,
-				builder: (_) => AlertDialog(
-					title: const Text('نجاح'),
-					content: Text('مرحباً ${user.name}'),
-					actions: [
-						TextButton(
-							onPressed: () {
-								Navigator.of(context).pop(); // يغلق الـ Dialog
-								Navigator.of(context).pushReplacement( // يذهب إلى الصفحة الرئيسية
-									MaterialPageRoute(
-										builder: (context) => CategoriesScreen(), // استبدل HomePage بصفحتك الرئيسية الفعلية
-									),
-								);
-							},
-							child: const Text('متابعة'),
-						),
-					],
-				),
-			);
-		} else {
-			// فشل تسجيل الدخول
+				_showSuccessDialog(user);
+			} else {
+				setState(() {
+					_errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+				});
+			}
+		} catch (e) {
 			setState(() {
-				_errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+				_errorMessage = 'حدث خطأ أثناء تسجيل الدخول';
+			});
+		} finally {
+			setState(() {
+				_isLoading = false;
 			});
 		}
 	}
 
+	Future<void> _loginWithGoogle() async {
+		try {
+			print('🔄 بدء تسجيل الدخول عبر Google...');
+			final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+			if (googleUser == null) {
+				print('❌ تم إلغاء تسجيل الدخول من قبل المستخدم.');
+				setState(() {
+					_errorMessage = 'تم إلغاء تسجيل الدخول من قبل المستخدم';
+				});
+				return;
+			}
+
+			final String email = googleUser.email;
+			final String name = googleUser.displayName ?? 'مستخدم Google';
+			final String id = googleUser.id;
+
+			print('✅ تسجيل الدخول عبر Google ناجح');
+			print('📧 البريد الإلكتروني: $email');
+			print('👤 الاسم: $name');
+			print('🆔 المعرف: $id');
+
+			final defaultPassword = 'google_default_password';
+
+			// تسجيل الدخول للتحقق مما إذا كان المستخدم موجوداً
+			final existingUser = await UserService.loginUser(email, defaultPassword);
+
+			User user;
+
+			if (existingUser != null) {
+				print('👤 تم العثور على المستخدم في قاعدة البيانات');
+				user = existingUser;
+			} else {
+				// إذا لم يكن موجوداً، يتم إنشاؤه
+				user = User(
+					id: id,
+					name: name,
+					email: email,
+					password: defaultPassword,
+					mobile: '',
+					image: '',
+					status: '',
+				);
+				await UserService.registerUser(user);
+				print('🆕 تم إنشاء مستخدم جديد في قاعدة البيانات عبر Google');
+			}
+
+			// حفظ البيانات
+			SharedPreferences prefs = await SharedPreferences.getInstance();
+			await prefs.setString('email', email);
+			await prefs.setString('password', defaultPassword);
+			await prefs.setString('login_method', 'google');
+
+			_showSuccessDialog(user);
+		} catch (error, stackTrace) {
+			print('🚫 فشل تسجيل الدخول عبر Google: $error');
+			print('📛 Stack Trace:\n$stackTrace');
+			setState(() {
+				_errorMessage = 'فشل تسجيل الدخول عبر Google: $error';
+			});
+		}
+	}
+
+
+
+	void _showSuccessDialog(User user) {
+		showDialog(
+			context: context,
+			builder: (_) => AlertDialog(
+				title: Text('مرحبًا ${user.name}'),
+				content: const Text('تم تسجيل الدخول بنجاح'),
+				actions: [
+					TextButton(
+						onPressed: () {
+							Navigator.of(context).pop();
+							_goToHome(user);
+						},
+						child: const Text('متابعة'),
+					)
+				],
+			),
+		);
+	}
+
+	void _goToHome(User user) {
+		Navigator.of(context).pushReplacement(
+			MaterialPageRoute(builder: (_) =>  CategoriesScreen()),
+		);
+	}
+
 	void _goToRegister() {
-		// الانتقال لصفحة التسجيل
-		debugPrint('الانتقال لصفحة التسجيل');
+		Navigator.push(
+			context,
+			MaterialPageRoute(builder: (_) =>  SignUpPage()),
+		);
 	}
 
 	void _forgotPassword() {
-		// الانتقال لصفحة نسيت كلمة المرور
-		debugPrint('الانتقال لنسيت كلمة المرور');
+		showDialog(
+			context: context,
+			builder: (_) => AlertDialog(
+				title: const Text('نسيت كلمة المرور؟'),
+				content: const Text('سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'),
+				actions: [
+					TextButton(onPressed: Navigator.of(context).pop, child: const Text('إلغاء')),
+					TextButton(onPressed: () {}, child: const Text('إرسال')),
+				],
+			),
+		);
+	}
+
+	Widget _buildTextInput({
+		required String label,
+		required IconData icon,
+		required TextEditingController controller,
+		bool obscure = false,
+		Widget? suffixIcon,
+		String? Function(String?)? validator,
+	}) {
+		return TextFormField(
+			controller: controller,
+			obscureText: obscure,
+			decoration: InputDecoration(
+				labelText: label,
+				prefixIcon: Icon(icon),
+				suffixIcon: suffixIcon,
+				border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+			),
+			validator: validator,
+		);
 	}
 
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
-			// استخدم Stack لإضافة خلفية وصفيحة أمامية
-			body: Stack(
-				children: [
-					// خلفية الصورة
-					SizedBox.expand(
-						child: Image.asset(
-							'assets/m.png', // تأكد من وضع ملف m.jpg داخل مجلد assets
-							fit: BoxFit.cover,
-						),
-					),
-					// المحتوى الأمامي
-					Center(
-						child: SingleChildScrollView(
-							padding: const EdgeInsets.symmetric(horizontal: 24.0),
-							child: Card(
-								elevation: 12,
-								shape: RoundedRectangleBorder(
-									borderRadius: BorderRadius.circular(20),
+			appBar: AppBar(
+				title: const Text('تسجيل الدخول'),
+				centerTitle: true,
+				backgroundColor: Colors.brown,
+			),
+			body: SingleChildScrollView(
+				padding: const EdgeInsets.all(20),
+				child: Form(
+					key: _formKey,
+					child: Column(
+						children: [
+							Image.asset('assets/logo.jpg', height: 120),
+							const SizedBox(height: 20),
+							_buildTextInput(
+								label: 'البريد الإلكتروني',
+								icon: Icons.email,
+								controller: _emailController,
+								validator: (value) => value!.isEmpty ? 'أدخل البريد الإلكتروني' : null,
+							),
+							const SizedBox(height: 15),
+							_buildTextInput(
+								label: 'كلمة المرور',
+								icon: Icons.lock,
+								controller: _passwordController,
+								obscure: _obscurePassword,
+								suffixIcon: IconButton(
+									icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+									onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
 								),
-								color: Colors.white, // تغيير خلفية الكارد إلى اللون الأبيض
-								child: Padding(
-									padding: const EdgeInsets.all(24.0),
-									child: Form(
-										key: _formKey,
-										child: Column(
-											mainAxisSize: MainAxisSize.min,
-											children: [
-												// عنوان الصفحة
-												const Text(
-													'تسجيل الدخول',
-													style: TextStyle(
-														fontSize: 26,
-														fontWeight: FontWeight.bold,
-														color: Colors.black, // تغيير لون النص إلى الأسود ليتناسب مع الخلفية البيضاء
-													),
-												),
-												const SizedBox(height: 24),
-												// حقل البريد الإلكتروني
-												TextFormField(
-													controller: _emailController,
-													decoration: InputDecoration(
-														labelText: 'البريد الإلكتروني',
-														border: OutlineInputBorder(
-															borderRadius: BorderRadius.circular(12),
-														),
-														prefixIcon: const Icon(Icons.email, color: Colors.black), // تغيير لون الأيقونة إلى الأسود
-														labelStyle: const TextStyle(color: Colors.black), // تغيير لون النص داخل الحقل إلى الأسود
-													),
-													keyboardType: TextInputType.emailAddress,
-													validator: (value) => value == null || value.isEmpty
-															? 'أدخل البريد الإلكتروني'
-															: null,
-												),
-												const SizedBox(height: 16),
-												// حقل كلمة المرور
-												TextFormField(
-													controller: _passwordController,
-													decoration: InputDecoration(
-														labelText: 'كلمة المرور',
-														border: OutlineInputBorder(
-															borderRadius: BorderRadius.circular(12),
-														),
-														prefixIcon: const Icon(Icons.lock, color: Colors.black), // تغيير لون الأيقونة إلى الأسود
-														labelStyle: const TextStyle(color: Colors.black), // تغيير لون النص داخل الحقل إلى الأسود
-													),
-													obscureText: true,
-													validator: (value) => value == null || value.isEmpty
-															? 'أدخل كلمة المرور'
-															: null,
-												),
-												const SizedBox(height: 12),
-												// رابط "نسيت كلمة المرور؟"
-												Align(
-													alignment: Alignment.centerRight,
-													child: TextButton(
-														onPressed: _forgotPassword,
-														child: const Text(
-															'نسيت كلمة المرور؟',
-															style: TextStyle(color: Colors.black), // تغيير لون النص إلى الأسود
-														),
-													),
-												),
-												if (_errorMessage != null)
-													Text(
-														_errorMessage!,
-														style: const TextStyle(color: Colors.red),
-													),
-												const SizedBox(height: 16),
-												// زر تسجيل الدخول
-												SizedBox(
-													width: double.infinity,
-													height: 50,
-													child: ElevatedButton(
-														onPressed: _isLoading ? null : _login,
-														style: ElevatedButton.styleFrom(
-															backgroundColor: Colors.blueAccent, // يمكنك تغيير لون الزر أيضًا إذا رغبت
-															shape: RoundedRectangleBorder(
-																borderRadius: BorderRadius.circular(12),
-															),
-														),
-														child: _isLoading
-																? const CircularProgressIndicator(color: Colors.white)
-																: const Text(
-															'تسجيل الدخول',
-															style: TextStyle(fontSize: 18, color: Colors.white), // تغيير لون النص إلى الأبيض
-														),
-													),
-												),
-												const SizedBox(height: 16),
-												// زر أو رابط إنشاء حساب جديد
-												Row(
-													mainAxisAlignment: MainAxisAlignment.center,
-													children: [
-														const Text('ليس لديك حساب؟', style: TextStyle(color: Colors.black)), // تغيير لون النص إلى الأسود
-														TextButton(
-															onPressed: _goToRegister,
-															child: const Text(
-																'إنشاء حساب',
-																style: TextStyle(
-																	color: Colors.blueAccent,
-																	fontWeight: FontWeight.bold,
-																),
-															),
-														),
-													],
-												)
-											],
-										),
-									),
+								validator: (value) => value!.isEmpty ? 'أدخل كلمة المرور' : null,
+							),
+							Align(
+								alignment: Alignment.centerLeft,
+								child: TextButton(
+									onPressed: _forgotPassword,
+									child: const Text('نسيت كلمة المرور؟'),
 								),
 							),
-						),
+							if (_errorMessage != null)
+								Text(
+									_errorMessage!,
+									style: const TextStyle(color: Colors.red),
+								),
+							const SizedBox(height: 20),
+							ElevatedButton(
+								onPressed: _isLoading ? null : _login,
+								child: _isLoading
+										? const CircularProgressIndicator()
+										: const Text('تسجيل الدخول'),
+							),
+							const SizedBox(height: 15),
+							OutlinedButton.icon(
+								onPressed: _loginWithGoogle,
+								icon: Image.asset('assets/m.png', height: 24),
+								label: const Text('تسجيل الدخول عبر Google'),
+							),
+							const SizedBox(height: 10),
+							TextButton(
+								onPressed: _goToRegister,
+								child: const Text('ليس لديك حساب؟ سجل الآن'),
+							),
+						],
 					),
-				],
+				),
 			),
 		);
 	}

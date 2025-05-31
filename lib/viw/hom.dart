@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'categories_screen.dart'; // ← استبدل بمسارك الصحيح
-import 'cart_screen.dart'; // ← استبدل بمسارك الصحيح
+import 'package:untitled2/viw/stores_all.dart';
+import 'AllProductsPage.dart';
+import 'categories_screen.dart';
+import 'cart_screen.dart';
 import 'login.dart';
-// ← استبدل بمسارك الصحيح
-import 'products_screen.dart'; // ← استبدل بمسارك الصحيح
+import 'products_screen.dart';
+// استيراد الصفحات الجديدة
 
 class HomePage extends StatefulWidget {
 	const HomePage({Key? key}) : super(key: key);
@@ -16,17 +18,71 @@ class _HomePageState extends State<HomePage> {
 	int _selectedIndex = 0;
 
 	final List<Widget> _pages = [
-		DashboardScreen(), // ← شاشة المحتوى الرئيسي
-		CategoriesScreen(), // ← الأقسام
-		CartPage(userId: "1", cartItems: []), // ← السلة
-		LoginPage(), // ← تسجيل الدخول
-		ProductsScreen(storeId: "1", storeName: "متجر العرض"), // ← المنتجات
+		DashboardScreen(), // شاشة المحتوى الرئيسي
+		CategoriesScreen(), // الأقسام
+		CartPage(userId: "1", cartItems: []), // السلة
+		LoginPage(), // تسجيل الدخول
+		ProductsScreen(storeId: "1", storeName: "متجر العرض"), // المنتجات
 	];
 
 	void _onItemTapped(int index) {
 		setState(() {
 			_selectedIndex = index;
 		});
+	}
+
+	// دالة لبناء فوتر الصفحة
+	Widget _buildFooter() {
+		return Container(
+			height: 60,
+			decoration: BoxDecoration(
+				color: Colors.teal[800],
+				boxShadow: [
+					BoxShadow(
+						color: Colors.black.withOpacity(0.1),
+						blurRadius: 10,
+						offset: const Offset(0, -5),
+					),
+				],
+			),
+			child: Row(
+				mainAxisAlignment: MainAxisAlignment.spaceAround,
+				children: [
+					_buildFooterIcon(Icons.shopping_cart, 'السلة', CartPage(userId: "1", cartItems: [])),
+					_buildFooterIcon(Icons.category, 'الأقسام', CategoriesScreen()),
+					_buildFooterIcon(Icons.store, 'المتاجر', SimpleStoreListPage()),
+					// تم استبدال الأكثر مبيعاً بجميع المنتجات
+					_buildFooterIcon(Icons.shopping_bag, 'جميع المنتجات', AllProductsPageNew()),
+				],
+			),
+		);
+	}
+
+	// دالة مساعدة لبناء أيقونات الفوتر
+	Widget _buildFooterIcon(IconData icon, String label, Widget page) {
+		return InkWell(
+			onTap: () {
+				Navigator.push(
+					context,
+					MaterialPageRoute(builder: (context) => page),
+				);
+			},
+			child: Column(
+				mainAxisAlignment: MainAxisAlignment.center,
+				children: [
+					Icon(icon, color: Colors.white, size: 28),
+					const SizedBox(height: 4),
+					Text(
+						label,
+						style: const TextStyle(
+							color: Colors.white,
+							fontSize: 12,
+							fontWeight: FontWeight.bold,
+						),
+					),
+				],
+			),
+		);
 	}
 
 	@override
@@ -120,21 +176,8 @@ class _HomePageState extends State<HomePage> {
 				),
 			),
 			body: _pages[_selectedIndex],
-			bottomNavigationBar: BottomNavigationBar(
-				currentIndex: _selectedIndex,
-				onTap: _onItemTapped,
-				type: BottomNavigationBarType.fixed,
-				backgroundColor: Colors.white,
-				selectedItemColor: Colors.teal,
-				unselectedItemColor: Colors.grey,
-				items: const [
-					BottomNavigationBarItem(icon: Icon(Icons.home), label: "الرئيسية"),
-					BottomNavigationBarItem(icon: Icon(Icons.category), label: "الأقسام"),
-					BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: "السلة"),
-					BottomNavigationBarItem(icon: Icon(Icons.person), label: "الحساب"),
-					BottomNavigationBarItem(icon: Icon(Icons.store), label: "المتاجر"),
-				],
-			),
+			// إضافة الفوتر هنا
+			bottomNavigationBar: _buildFooter(),
 		);
 	}
 }

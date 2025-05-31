@@ -14,6 +14,28 @@ class UserService {
 	static const _update = 'update';
 	static const _delete = 'delete';
 
+	static Future<bool> registerUser(User user) async {
+		var map = user.toJson();
+		map['action'] = _add; // أكشن الإضافة عند التسجيل
+		try {
+			final response = await http.post(url, body: map);
+			print('registerUser: response code: ${response.statusCode}');
+			print('registerUser: response body: ${response.body}');
+
+			if (response.statusCode == 200) {
+				final decoded = json.decode(response.body);
+				// التأكد من وجود المفتاح 'success' وقيمته true
+				final bool success = decoded['success'] ?? false;
+				return success;
+			}
+			return false;
+		} catch (e, stackTrace) {
+			print('Exception in registerUser: $e');
+			print('StackTrace: $stackTrace');
+			return false;
+		}
+	}
+
 	static Future<List<User>> getAllUsers() async {
 		try {
 			var map = {'action': _fetch};
