@@ -4,13 +4,64 @@ import '../ApiConfig.dart';
 import '../model/admin_model.dart';
 
 class AdminService {
-	//static var url = Uri.parse('http://192.168.43.129/ecommerce/api_admin.php');
 	static final url = Uri.parse(ApiHelper.url('api_admin.php'));
 	static const _add = 'add';
 	static const _fetch = 'fetch';
 	static const _update = 'update';
 	static const _delete = 'delete';
 
+	/// استرجاع الادمن بواسطة الإيميل
+	static Future<Admin?> getAdminByEmail(String email) async {
+		try {
+			final response = await http.post(
+				url,
+				body: {
+					'action': 'get_by_email',
+					'email': email,
+				},
+			);
+			print('getAdminByEmail: response code: ${response.statusCode}');
+			print('getAdminByEmail: response body: ${response.body}');
+			if (response.statusCode == 200) {
+				final data = json.decode(response.body);
+				if (data != null && data is Map<String, dynamic>) {
+					return Admin.fromJson(data);
+				}
+			}
+		} catch (e, stackTrace) {
+			print('Exception in getAdminByEmail: $e');
+			print('StackTrace: $stackTrace');
+		}
+		return null;
+	}
+
+	/// تسجيل دخول الادمن
+	static Future<Admin?> loginAdmin(String email, String password) async {
+		try {
+			final response = await http.post(
+				url,
+				body: {
+					'action': 'login',
+					'email': email,
+					'password': password,
+				},
+			);
+			print('loginAdmin: response code: ${response.statusCode}');
+			print('loginAdmin: response body: ${response.body}');
+			if (response.statusCode == 200) {
+				final data = json.decode(response.body);
+				if (data != null && data is Map<String, dynamic>) {
+					return Admin.fromJson(data);
+				}
+			}
+		} catch (e, stackTrace) {
+			print('Exception in loginAdmin: $e');
+			print('StackTrace: $stackTrace');
+		}
+		return null;
+	}
+
+	/// استرجاع كل الادمنز
 	static Future<List<Admin>> getAllAdmins() async {
 		try {
 			var map = {'action': _fetch};
@@ -30,6 +81,7 @@ class AdminService {
 		}
 	}
 
+	/// إضافة ادمن جديد
 	static Future<String> addAdmin(Admin admin) async {
 		var map = admin.toJson();
 		map['action'] = _add;
@@ -45,6 +97,7 @@ class AdminService {
 		}
 	}
 
+	/// تحديث بيانات الادمن
 	static Future<String> updateAdmin(Admin admin) async {
 		var map = admin.toJson();
 		map['action'] = _update;
@@ -60,6 +113,7 @@ class AdminService {
 		}
 	}
 
+	/// حذف الادمن
 	static Future<String> deleteAdmin(String id) async {
 		var map = {
 			'action': _delete,

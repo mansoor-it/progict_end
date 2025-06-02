@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 class Admin {
   final String id;
   final String name;
@@ -33,6 +35,78 @@ class Admin {
     this.updatedAt,
   });
 
+  /// مُنشئ لإنشاء مدير جديد بتسجيل التاريخ تلقائياً
+  factory Admin.create({
+    required String id,
+    required String name,
+    required String type,
+    required String vendorId,
+    required String mobile,
+    required String email,
+    required String password,
+    required String image,
+    required String confirm,
+    required String status,
+    String? emailVerifiedAt,
+    String? rememberToken,
+    String? accessToken,
+  }) {
+    String now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    return Admin(
+      id: id,
+      name: name,
+      type: type,
+      vendorId: vendorId,
+      mobile: mobile,
+      email: email,
+      password: password,
+      image: image,
+      confirm: confirm,
+      status: status,
+      emailVerifiedAt: emailVerifiedAt,
+      rememberToken: rememberToken,
+      accessToken: accessToken,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  /// دالة copyWith لتحديث بيانات المدير مع الحفاظ على createdAt وتحديث updatedAt
+  Admin copyWith({
+    String? id,
+    String? name,
+    String? type,
+    String? vendorId,
+    String? mobile,
+    String? email,
+    String? password,
+    String? image,
+    String? confirm,
+    String? status,
+    String? emailVerifiedAt,
+    String? rememberToken,
+    String? accessToken,
+  }) {
+    String now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    return Admin(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      vendorId: vendorId ?? this.vendorId,
+      mobile: mobile ?? this.mobile,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      image: image ?? this.image,
+      confirm: confirm ?? this.confirm,
+      status: status ?? this.status,
+      emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
+      rememberToken: rememberToken ?? this.rememberToken,
+      accessToken: accessToken ?? this.accessToken,
+      createdAt: this.createdAt,
+      updatedAt: now,
+    );
+  }
+
   factory Admin.fromJson(Map<String, dynamic> json) {
     return Admin(
       id: json['id'].toString(),
@@ -65,12 +139,11 @@ class Admin {
       'image': image,
       'confirm': confirm,
       'status': status,
-      // تحويل القيم الاختيارية إلى نص فارغ في حال كانت null
-      'email_verified_at': emailVerifiedAt ?? "",
-      'remember_token': rememberToken ?? "",
-      'access_token': accessToken ?? "",
-      'created_at': createdAt ?? "",
-      'updated_at': updatedAt ?? "",
+      'email_verified_at': emailVerifiedAt ?? '',
+      'remember_token': rememberToken ?? '',
+      'access_token': accessToken ?? '',
+      'created_at': createdAt ?? '',
+      'updated_at': updatedAt ?? '',
     };
   }
 }

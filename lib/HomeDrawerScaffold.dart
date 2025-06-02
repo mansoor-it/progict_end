@@ -1,11 +1,21 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:io'; // أضيفت
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart'; // أضيفت
 import 'package:untitled2/viw/login.dart';
 import '../model/user_model.dart';
 import '../service/user_server.dart';
+import 'AboutUsPage.dart';
+import 'Support or Help.dart';
+
+// ألوان التصميم
+const Color primaryBrown = Color(0xFF795548);
+const Color accentBrown = Color(0xFF5D4037);
+const Color lightBrown = Color(0xFFD7CCC8);
+const Color darkBrown = Color(0xFF4E342E);
 
 class HomeDrawerScaffold extends StatefulWidget {
 	const HomeDrawerScaffold({super.key});
@@ -71,26 +81,92 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 		}
 	}
 
+	// أضيفت: دالة تحديث الصورة
+	Future<void> _updateUserImage(String newImageBase64) async {
+		User updatedUser = User(
+			id: _userId,
+			name: _userName,
+			mobile: _mobile,
+			email: _userEmail,
+			password: _password,
+			image: newImageBase64,
+			status: _status,
+			emailVerifiedAt: _emailVerifiedAt,
+			rememberToken: _rememberToken,
+			accessToken: _accessToken,
+			createdAt: _createdAt,
+			updatedAt: DateTime.now().toIso8601String(),
+		);
+
+		String result = await UserService.updateUser(updatedUser);
+		if (!result.toLowerCase().contains('success')) {
+			ScaffoldMessenger.of(context).showSnackBar(
+				const SnackBar(
+					content: Text('فشل تحديث الصورة في السيرفر'),
+					backgroundColor: Colors.red,
+				),
+			);
+			return;
+		}
+
+		final prefs = await SharedPreferences.getInstance();
+		await prefs.setString('image', newImageBase64);
+
+		setState(() {
+			_userImage = newImageBase64;
+		});
+	}
+
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
-			appBar: AppBar(title: const Text('الصفحة الرئيسية')),
+			appBar: AppBar(
+				title: const Text('الصفحة الرئيسية', style: TextStyle(color: Colors.white)),
+				backgroundColor: primaryBrown,
+				iconTheme: const IconThemeData(color: Colors.white),
+			),
 			drawer: Drawer(
-				child: Column(
+				backgroundColor: primaryBrown,
+				shape: const RoundedRectangleBorder(
+					borderRadius: BorderRadius.only(topRight: Radius.circular(20)),
+					side: BorderSide(color: Colors.white, width: 2.0),
+				),
+				child: ListView(
 					children: [
 						UserAccountsDrawerHeader(
+							decoration: const BoxDecoration(
+								color: darkBrown,
+								border: Border(bottom: BorderSide(color: Colors.white, width: 1.0)),
+							),
 							currentAccountPicture: _userImage.isNotEmpty
 									? CircleAvatar(
+								backgroundColor: Colors.transparent,
 								backgroundImage:
 								MemoryImage(_decodeBase64Image(_userImage) ?? Uint8List(0)),
 							)
-									: const CircleAvatar(child: Icon(Icons.person)),
-							accountName: Text(_userName),
-							accountEmail: Text(_userEmail),
+									: const CircleAvatar(
+									backgroundColor: lightBrown,
+									child: Icon(Icons.person, size: 40, color: darkBrown)),
+							accountName: Text(
+								_userName,
+								style: const TextStyle(
+									color: Colors.white,
+									fontWeight: FontWeight.bold,
+									fontSize: 18,
+								),
+							),
+							accountEmail: Text(
+								_userEmail,
+								style: const TextStyle(
+									color: lightBrown,
+									fontSize: 14,
+								),
+							),
 						),
+						const Divider(color: Colors.white, height: 1, thickness: 0.5),
 						ListTile(
-							leading: const Icon(Icons.person),
-							title: const Text('ملفي الشخصي'),
+							leading: const Icon(Icons.account_circle, color: Colors.white, size: 28),
+							title: const Text('ملفي الشخصي', style: TextStyle(color: Colors.white, fontSize: 16)),
 							onTap: () {
 								Navigator.push(
 									context,
@@ -114,7 +190,7 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 													mobile: newMobile,
 													email: _userEmail,
 													password: newPassword,
-													image: _userImage,
+													image: _userImage, // تم تحديثها لاحقاً
 													status: _status,
 													emailVerifiedAt: newEmailVerifiedAt,
 													rememberToken: _rememberToken,
@@ -151,21 +227,62 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 													_updatedAt = updatedUser.updatedAt ?? '';
 												});
 											},
+											onImageUpdated: _updateUserImage, // أضيفت
 										),
 									),
 								);
 							},
 						),
-						const Divider(),
+						const Divider(color: Colors.white, height: 1, thickness: 0.5),
 						ListTile(
-							leading: const Icon(Icons.logout, color: Colors.red),
-							title: const Text('تسجيل الخروج'),
+							leading: const Icon(Icons.support_agent, color: Colors.white, size: 28),
+							title: const Text('الدعم', style: TextStyle(color: Colors.white, fontSize: 16)),
+							onTap: () {
+								Navigator.push(
+									context,
+									MaterialPageRoute(builder: (_) => SupportPage()),
+								);
+							},
+						),
+						const Divider(color: Colors.white, height: 1, thickness: 0.5),
+						ListTile(
+							leading: const Icon(Icons.info, color: Colors.white, size: 28),
+							title: const Text('من نحن', style: TextStyle(color: Colors.white, fontSize: 16)),
+							onTap: () {
+								Navigator.push(
+									context,
+									MaterialPageRoute(builder: (_) => AboutUsPage()),
+								);
+							},
+						),
+						const Divider(color: Colors.white, height: 1, thickness: 0.5),
+						ListTile(
+							leading: const Icon(Icons.logout, color: Colors.red, size: 28),
+							title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontSize: 16)),
 							onTap: _logout,
 						),
 					],
 				),
 			),
-			body: const Center(child: Text('مرحبًا بك في الصفحة الرئيسية!')),
+			body: Container(
+				decoration: const BoxDecoration(
+					gradient: LinearGradient(
+						begin: Alignment.topCenter,
+						end: Alignment.bottomCenter,
+						colors: [lightBrown, Colors.white],
+					),
+				),
+				child: const Center(
+					child: Text(
+						'مرحبًا بك في الصفحة الرئيسية!',
+						style: TextStyle(
+							fontSize: 24,
+							fontWeight: FontWeight.bold,
+							color: darkBrown,
+						),
+					),
+				),
+			),
 		);
 	}
 }
@@ -181,6 +298,7 @@ class UserProfilePage extends StatefulWidget {
 	final String createdAt;
 	final String updatedAt;
 	final Function(String, String, String, String) onUserUpdated;
+	final Function(String) onImageUpdated; // أضيفت
 
 	const UserProfilePage({
 		super.key,
@@ -194,6 +312,7 @@ class UserProfilePage extends StatefulWidget {
 		required this.createdAt,
 		required this.updatedAt,
 		required this.onUserUpdated,
+		required this.onImageUpdated, // أضيفت
 	});
 
 	@override
@@ -205,6 +324,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
 	late String _mobile;
 	late String _emailVerifiedAt;
 	late String _password;
+	late String _image; // أضيفت
 
 	@override
 	void initState() {
@@ -213,6 +333,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
 		_mobile = widget.mobile;
 		_emailVerifiedAt = widget.emailVerifiedAt;
 		_password = widget.password;
+		_image = widget.image; // أضيفت
 	}
 
 	Uint8List? _decodeBase64Image(String base64Image) {
@@ -220,6 +341,25 @@ class _UserProfilePageState extends State<UserProfilePage> {
 			return base64Decode(base64Image);
 		} catch (_) {
 			return null;
+		}
+	}
+
+	// أضيفت: دالة اختيار الصورة
+	Future<void> _pickImage() async {
+		final picker = ImagePicker();
+		final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+		if (pickedFile != null) {
+			final bytes = await pickedFile.readAsBytes();
+			String base64Image = base64Encode(bytes);
+
+			// تحديث الصورة محلياً
+			setState(() {
+				_image = base64Image;
+			});
+
+			// إرسال التحديث للسيرفر
+			widget.onImageUpdated(base64Image);
 		}
 	}
 
@@ -233,32 +373,75 @@ class _UserProfilePageState extends State<UserProfilePage> {
 		showDialog(
 			context: context,
 			builder: (context) => AlertDialog(
-				title: const Text('تعديل البيانات'),
+				title: const Text('تعديل البيانات', style: TextStyle(color: primaryBrown)),
 				content: SingleChildScrollView(
 					child: Column(
 						mainAxisSize: MainAxisSize.min,
 						children: [
 							TextField(
 								controller: _nameController,
-								decoration:
-								const InputDecoration(labelText: 'الاسم الكامل'),
+								decoration: InputDecoration(
+									labelText: 'الاسم الكامل',
+									labelStyle: const TextStyle(color: primaryBrown),
+									border: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown),
+									),
+									focusedBorder: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown, width: 2),
+									),
+								),
 							),
+							const SizedBox(height: 15),
 							TextField(
 								controller: _mobileController,
 								keyboardType: TextInputType.phone,
-								decoration:
-								const InputDecoration(labelText: 'رقم الجوال'),
+								decoration: InputDecoration(
+									labelText: 'رقم الجوال',
+									labelStyle: const TextStyle(color: primaryBrown),
+									border: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown),
+									),
+									focusedBorder: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown, width: 2),
+									),
+								),
 							),
+							const SizedBox(height: 15),
 							TextField(
 								controller: _passwordController,
 								obscureText: true,
-								decoration:
-								const InputDecoration(labelText: 'كلمة المرور'),
+								decoration: InputDecoration(
+									labelText: 'كلمة المرور',
+									labelStyle: const TextStyle(color: primaryBrown),
+									border: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown),
+									),
+									focusedBorder: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown, width: 2),
+									),
+								),
 							),
+							const SizedBox(height: 15),
 							TextField(
 								controller: _emailVerifiedController,
-								decoration: const InputDecoration(
-										labelText: 'تم التحقق من البريد'),
+								decoration: InputDecoration(
+									labelText: 'تم التحقق من البريد',
+									labelStyle: const TextStyle(color: primaryBrown),
+									border: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown),
+									),
+									focusedBorder: OutlineInputBorder(
+										borderRadius: BorderRadius.circular(10),
+										borderSide: const BorderSide(color: primaryBrown, width: 2),
+									),
+								),
 							),
 						],
 					),
@@ -268,7 +451,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
 						onPressed: () {
 							Navigator.of(context).pop();
 						},
-						child: const Text('إلغاء'),
+						child: const Text('إلغاء', style: TextStyle(color: Colors.red)),
 					),
 					ElevatedButton(
 						onPressed: () {
@@ -285,7 +468,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
 							Navigator.of(context).pop();
 						},
-						child: const Text('حفظ'),
+						style: ElevatedButton.styleFrom(
+							backgroundColor: primaryBrown,
+							shape: RoundedRectangleBorder(
+								borderRadius: BorderRadius.circular(10),
+							),
+						),
+						child: const Text('حفظ', style: TextStyle(color: Colors.white)),
 					),
 				],
 			),
@@ -295,54 +484,112 @@ class _UserProfilePageState extends State<UserProfilePage> {
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
-			appBar: AppBar(title: const Text('ملفي الشخصي')),
-			body: SingleChildScrollView(
-				padding: const EdgeInsets.all(16),
-				child: Column(
-					children: [
-						if (widget.image.isNotEmpty)
-							CircleAvatar(
-								radius: 60,
-								backgroundImage: MemoryImage(
-										_decodeBase64Image(widget.image) ?? Uint8List(0)),
+			appBar: AppBar(
+				title: const Text('ملفي الشخصي', style: TextStyle(color: Colors.white)),
+				backgroundColor: primaryBrown,
+				iconTheme: const IconThemeData(color: Colors.white),
+			),
+			body: Container(
+				decoration: const BoxDecoration(
+					gradient: LinearGradient(
+						begin: Alignment.topCenter,
+						end: Alignment.bottomCenter,
+						colors: [lightBrown, Colors.white],
+					),
+				),
+				child: SingleChildScrollView(
+					padding: const EdgeInsets.all(16),
+					child: Column(
+						children: [
+							Stack(
+								alignment: Alignment.bottomRight,
+								children: [
+									Container(
+										decoration: BoxDecoration(
+											shape: BoxShape.circle,
+											border: Border.all(color: primaryBrown, width: 3),
+										),
+										child: CircleAvatar(
+											radius: 60,
+											backgroundColor: Colors.transparent,
+											backgroundImage: _image.isNotEmpty
+													? MemoryImage(_decodeBase64Image(_image) ?? Uint8List(0))
+													: null,
+											child: _image.isEmpty
+													? const Icon(Icons.person, size: 60, color: primaryBrown)
+													: null,
+										),
+									),
+									Container(
+										decoration: const BoxDecoration(
+											shape: BoxShape.circle,
+											color: primaryBrown,
+										),
+										child: IconButton(
+											icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+											onPressed: _pickImage,
+										),
+									),
+								],
 							),
-						const SizedBox(height: 16),
-						_buildTile('الاسم الكامل', _name),
-						_buildTile('البريد الإلكتروني', widget.email),
-						_buildTile('رقم الجوال', _mobile),
-						_buildTile('تم التحقق من البريد', _emailVerifiedAt),
-						_buildTile('كلمة المرور', _password),
-						_buildTile('تاريخ الإنشاء', widget.createdAt),
-						_buildTile('آخر تحديث', widget.updatedAt),
-						const SizedBox(height: 20),
-						ElevatedButton.icon(
-							onPressed: _showEditDialog,
-							icon: const Icon(Icons.edit),
-							label: const Text('تعديل البيانات'),
-						),
-					],
+							const SizedBox(height: 20),
+							_buildTile(Icons.person, 'الاسم الكامل', _name),
+							_buildTile(Icons.email, 'البريد الإلكتروني', widget.email),
+							_buildTile(Icons.phone, 'رقم الجوال', _mobile),
+							_buildTile(Icons.verified_user, 'تم التحقق من البريد', _emailVerifiedAt),
+							_buildTile(Icons.lock, 'كلمة المرور', _password),
+							_buildTile(Icons.calendar_today, 'تاريخ الإنشاء', widget.createdAt),
+							_buildTile(Icons.update, 'آخر تحديث', widget.updatedAt),
+							const SizedBox(height: 30),
+							ElevatedButton.icon(
+								onPressed: _showEditDialog,
+								icon: const Icon(Icons.edit, color: Colors.white),
+								label: const Text('تعديل البيانات', style: TextStyle(color: Colors.white)),
+								style: ElevatedButton.styleFrom(
+									backgroundColor: primaryBrown,
+									padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+									shape: RoundedRectangleBorder(
+										borderRadius: BorderRadius.circular(10),
+									),
+								),
+							),
+						],
+					),
 				),
 			),
 		);
 	}
 
-	Widget _buildTile(String label, String value) {
-		return Padding(
-			padding: const EdgeInsets.symmetric(vertical: 8),
-			child: Row(
-				children: [
-					Text(
-						'$label: ',
-						style: const TextStyle(
-								fontWeight: FontWeight.bold, fontSize: 16),
-					),
-					Expanded(
-						child: Text(
-							value.isNotEmpty ? value : 'غير متوفر',
-							style: const TextStyle(fontSize: 16),
-						),
+	Widget _buildTile(IconData icon, String label, String value) {
+		return Container(
+			margin: const EdgeInsets.symmetric(vertical: 8),
+			decoration: BoxDecoration(
+				color: Colors.white,
+				borderRadius: BorderRadius.circular(10),
+				border: Border.all(color: lightBrown),
+				boxShadow: [
+					BoxShadow(
+						color: Colors.grey.withOpacity(0.2),
+						spreadRadius: 1,
+						blurRadius: 3,
+						offset: const Offset(0, 2),
 					),
 				],
+			),
+			child: ListTile(
+				leading: Icon(icon, color: primaryBrown),
+				title: Text(
+					label,
+					style: const TextStyle(
+						fontWeight: FontWeight.bold,
+						fontSize: 16,
+						color: darkBrown,
+					),
+				),
+				subtitle: Text(
+					value.isNotEmpty ? value : 'غير متوفر',
+					style: const TextStyle(fontSize: 14, color: primaryBrown),
+				),
 			),
 		);
 	}

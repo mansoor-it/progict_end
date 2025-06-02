@@ -51,6 +51,7 @@ dependencies:
   google_sign_in: ^6.3.0
   font_awesome_flutter: ^10.8.0
   url_launcher: ^6.3.1
+  easy_localization: ^3.0.7+1
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +75,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/translations/
     - assets/logo.jpg
     - assets/m.png
     - assets/store_banner.jpg

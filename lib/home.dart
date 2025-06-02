@@ -21,26 +21,6 @@ import 'controll/PaymentsManagementPage.dart';
 import 'controll/OrdersAndDetailsManagementPage.dart';
 
 
-void main() {
-	runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-	const MyApp({super.key});
-
-	@override
-	Widget build(BuildContext context) {
-		return MaterialApp(
-			title: 'لوحة التحكم',
-			theme: ThemeData(
-				primarySwatch: Colors.blue,
-				fontFamily: 'Tajawal',
-			),
-			debugShowCheckedModeBanner: false,
-			home: const NavigationHomePage(),
-		);
-	}
-}
 
 class NavigationHomePage extends StatefulWidget {
 	const NavigationHomePage({super.key});
