@@ -1,596 +1,306 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:io'; // أضيفت
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart'; // أضيفت
-import 'package:untitled2/viw/login.dart';
-import '../model/user_model.dart';
-import '../service/user_server.dart';
-import 'AboutUsPage.dart';
-import 'Support or Help.dart';
+import 'package:untitled2/viw/EditProfilePage.dart';
+import 'package:untitled2/viw/cart_screen.dart'; // تأكد من المسار الصحيح
+import 'package:untitled2/viw/categories_screen.dart'; // تأكد من المسار الصحيح
+import 'package:untitled2/viw/login.dart'; // تأكد من المسار الصحيح
+import 'package:untitled2/viw/products_screen.dart'; // تأكد من المسار الصحيح
+import 'package:untitled2/viw/stores_all.dart'; // تأكد من المسار الصحيح
+import '../model/user_model.dart'; // تأكد من المسار الصحيح لنموذج المستخدم
+ // <-- استخدام صفحة التعديل المصححة
+import '../service/user_server.dart'; // <-- استيراد خدمة المستخدم لجلب البيانات
 
-// ألوان التصميم
-const Color primaryBrown = Color(0xFF795548);
-const Color accentBrown = Color(0xFF5D4037);
-const Color lightBrown = Color(0xFFD7CCC8);
-const Color darkBrown = Color(0xFF4E342E);
+// --- ألوان للتصميم الجذاب (يمكن تخصيصها) ---
+const Color primaryDrawerColor = Color(0xFF6D4C41);
+const Color accentDrawerColor = Color(0xFF8D6E63);
+const Color headerDrawerColor = Color(0xFF5D4037);
+const Color iconDrawerColor = Colors.white70;
+const Color textDrawerColor = Colors.white;
+const Color selectedTileColor = Color(0xFF4E342E);
 
 class HomeDrawerScaffold extends StatefulWidget {
-	const HomeDrawerScaffold({super.key});
+	final User user; // المستخدم الأولي عند تسجيل الدخول
+
+	const HomeDrawerScaffold({Key? key, required this.user}) : super(key: key);
 
 	@override
-	State<HomeDrawerScaffold> createState() => _HomeDrawerScaffoldState();
+	_HomeDrawerScaffoldState createState() => _HomeDrawerScaffoldState();
 }
 
 class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
-	String _userName = '';
-	String _userEmail = '';
-	String _userImage = '';
+	int _selectedIndex = 0;
+	String _title = 'الأقسام';
+	late User _currentUser; // لتخزين وعرض المستخدم الحالي
+	bool _isLoadingUser = false; // لتتبع حالة تحميل بيانات المستخدم
 
-	// البيانات الإضافية
-	String _userId = '';
-	String _mobile = '';
-	String _password = '';
-	String _status = '';
-	String _emailVerifiedAt = '';
-	String _rememberToken = '';
-	String _accessToken = '';
-	String _createdAt = '';
-	String _updatedAt = '';
+	late List<Widget> _pages;
 
 	@override
 	void initState() {
 		super.initState();
-		_loadUserData();
+		_currentUser = widget.user; // ابدأ بالمستخدم الأولي
+		_buildPages(); // بناء الصفحات أولاً
+		_fetchAndUpdateUserData(); // ثم جلب أحدث بيانات للمستخدم
 	}
 
-	Future<void> _loadUserData() async {
-		final prefs = await SharedPreferences.getInstance();
+	// بناء قائمة الصفحات
+	void _buildPages() {
+		_pages = [
+			CategoriesScreen(user: _currentUser),
+			SimpleStoreListPage(user: _currentUser),
+			AllProductsPageNew(),
+			CartPage(userId: _currentUser.id),
+		];
+	}
 
+	// --- دالة لجلب أحدث بيانات المستخدم من قاعدة البيانات وتحديث الواجهة ---
+	Future<void> _fetchAndUpdateUserData() async {
+		if (!mounted) return;
+		setState(() => _isLoadingUser = true);
+		try {
+			final prefs = await SharedPreferences.getInstance();
+			final userId = prefs.getString('id') ?? widget.user.id;
+
+			// --- تصحيح: استخدام اسم الدالة الصحيح من UserService ---
+			// !!! تأكد من أن اسم الدالة `fetchUserDataById` هو الصحيح في ملف user_server.dart !!!
+			User? fetchedUser = await UserService.fetchUserDataById(userId);
+
+			if (fetchedUser != null && mounted) {
+				setState(() {
+					_currentUser = fetchedUser;
+					_buildPages();
+				});
+				_updatePrefs(_currentUser);
+			} else if (mounted) {
+				print("لم يتم العثور على المستخدم أو حدث خطأ أثناء الجلب باستخدام ID: $userId");
+			}
+		} catch (e) {
+			print("Error fetching user data: $e");
+			if (mounted) {
+				ScaffoldMessenger.of(context).showSnackBar(
+					SnackBar(content: Text('خطأ في تحميل بيانات المستخدم: ${e.toString()}'), backgroundColor: Colors.orange),
+				);
+			}
+		} finally {
+			if (mounted) {
+				setState(() => _isLoadingUser = false);
+			}
+		}
+	}
+
+	void _updateTitle(int index) {
+		switch (index) {
+			case 0: _title = 'الأقسام'; break;
+			case 1: _title = 'المتاجر'; break;
+			case 2: _title = 'جميع المنتجات'; break;
+			case 3: _title = 'السلة'; break;
+			default: _title = 'متجرك';
+		}
+	}
+
+	void _onSelectItem(int index) {
 		setState(() {
-			_userId = prefs.getString('id') ?? '';
-			_userName = prefs.getString('name') ?? 'الاسم غير متوفر';
-			_userEmail = prefs.getString('email') ?? 'البريد غير متوفر';
-			_userImage = prefs.getString('image') ?? '';
-			_mobile = prefs.getString('mobile') ?? '';
-			_password = prefs.getString('password') ?? '';
-			_status = prefs.getString('status') ?? '';
-			_emailVerifiedAt = prefs.getString('email_verified_at') ?? '';
-			_rememberToken = prefs.getString('remember_token') ?? '';
-			_accessToken = prefs.getString('access_token') ?? '';
-			_createdAt = prefs.getString('created_at') ?? '';
-			_updatedAt = prefs.getString('updated_at') ?? '';
+			_selectedIndex = index;
+			_updateTitle(index);
 		});
+		Navigator.of(context).pop();
 	}
 
-	void _logout() async {
+	Future<void> _logout() async {
 		final prefs = await SharedPreferences.getInstance();
 		await prefs.clear();
-		Navigator.of(context).pushReplacement(
-			MaterialPageRoute(builder: (context) => LoginPage()),
+		if (!mounted) return;
+		Navigator.of(context).pushAndRemoveUntil(
+			MaterialPageRoute(builder: (_) => LoginPage()),
+					(Route<dynamic> route) => false,
 		);
 	}
 
-	Uint8List? _decodeBase64Image(String base64Image) {
+	Uint8List? _decodeImage(String? base64String) {
+		if (base64String == null || base64String.isEmpty) return null;
 		try {
-			return base64Decode(base64Image);
-		} catch (_) {
+			String actualBase64 = base64String.contains(',')
+					? base64String.substring(base64String.indexOf(',') + 1)
+					: base64String;
+			return base64Decode(actualBase64);
+		} catch (e) {
+			print("Error decoding image in drawer: $e");
 			return null;
 		}
 	}
 
-	// أضيفت: دالة تحديث الصورة
-	Future<void> _updateUserImage(String newImageBase64) async {
-		User updatedUser = User(
-			id: _userId,
-			name: _userName,
-			mobile: _mobile,
-			email: _userEmail,
-			password: _password,
-			image: newImageBase64,
-			status: _status,
-			emailVerifiedAt: _emailVerifiedAt,
-			rememberToken: _rememberToken,
-			accessToken: _accessToken,
-			createdAt: _createdAt,
-			updatedAt: DateTime.now().toIso8601String(),
-		);
-
-		String result = await UserService.updateUser(updatedUser);
-		if (!result.toLowerCase().contains('success')) {
-			ScaffoldMessenger.of(context).showSnackBar(
-				const SnackBar(
-					content: Text('فشل تحديث الصورة في السيرفر'),
-					backgroundColor: Colors.red,
+	void _navigateToEditProfile() {
+		Navigator.pop(context);
+		Navigator.push(
+			context,
+			MaterialPageRoute(
+				builder: (context) => EditProfilePage(
+					user: _currentUser,
+					onProfileUpdateSuccess: () {
+						_fetchAndUpdateUserData();
+					},
 				),
-			);
-			return;
-		}
+			),
+		);
+	}
 
+	Future<void> _updatePrefs(User user) async {
 		final prefs = await SharedPreferences.getInstance();
-		await prefs.setString('image', newImageBase64);
-
-		setState(() {
-			_userImage = newImageBase64;
-		});
+		await prefs.setString('id', user.id);
+		await prefs.setString('name', user.name);
+		await prefs.setString('email', user.email);
+		await prefs.setString('mobile', user.mobile ?? '');
+		await prefs.setString('image', user.image ?? '');
 	}
 
 	@override
 	Widget build(BuildContext context) {
+		final theme = Theme.of(context);
+		final user = _currentUser;
+		final userImageBytes = _decodeImage(user.image);
+
 		return Scaffold(
 			appBar: AppBar(
-				title: const Text('الصفحة الرئيسية', style: TextStyle(color: Colors.white)),
-				backgroundColor: primaryBrown,
-				iconTheme: const IconThemeData(color: Colors.white),
+				title: Text(_title, style: TextStyle(color: Colors.white)),
+				centerTitle: true,
+				backgroundColor: primaryDrawerColor,
+				elevation: 2,
+				iconTheme: IconThemeData(color: Colors.white),
+				actions: [
+					IconButton(
+						icon: Badge(
+							label: Text('0'),
+							isLabelVisible: false,
+							child: const Icon(Icons.shopping_cart_outlined),
+						),
+						tooltip: 'السلة',
+						onPressed: () {
+							if (_pages.length > 3 && _pages[3] is CartPage) {
+								_onSelectItem(3);
+							} else {
+								Navigator.push(
+									context,
+									MaterialPageRoute(builder: (context) => CartPage(userId: user.id)),
+								);
+							}
+						},
+					),
+				],
 			),
 			drawer: Drawer(
-				backgroundColor: primaryBrown,
-				shape: const RoundedRectangleBorder(
-					borderRadius: BorderRadius.only(topRight: Radius.circular(20)),
-					side: BorderSide(color: Colors.white, width: 2.0),
-				),
+				backgroundColor: primaryDrawerColor,
 				child: ListView(
-					children: [
-						UserAccountsDrawerHeader(
-							decoration: const BoxDecoration(
-								color: darkBrown,
-								border: Border(bottom: BorderSide(color: Colors.white, width: 1.0)),
-							),
-							currentAccountPicture: _userImage.isNotEmpty
-									? CircleAvatar(
-								backgroundColor: Colors.transparent,
-								backgroundImage:
-								MemoryImage(_decodeBase64Image(_userImage) ?? Uint8List(0)),
-							)
-									: const CircleAvatar(
-									backgroundColor: lightBrown,
-									child: Icon(Icons.person, size: 40, color: darkBrown)),
-							accountName: Text(
-								_userName,
-								style: const TextStyle(
-									color: Colors.white,
-									fontWeight: FontWeight.bold,
-									fontSize: 18,
+					padding: EdgeInsets.zero,
+					children: <Widget>[
+						Container(
+							padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, bottom: 16, left: 16, right: 16),
+							decoration: BoxDecoration(
+								color: headerDrawerColor,
+								image: DecorationImage(
+									image: AssetImage('assets/m.png'), // تأكد من وجود هذا المسار
+									fit: BoxFit.cover,
+									colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
 								),
 							),
-							accountEmail: Text(
-								_userEmail,
-								style: const TextStyle(
-									color: lightBrown,
-									fontSize: 14,
-								),
-							),
-						),
-						const Divider(color: Colors.white, height: 1, thickness: 0.5),
-						ListTile(
-							leading: const Icon(Icons.account_circle, color: Colors.white, size: 28),
-							title: const Text('ملفي الشخصي', style: TextStyle(color: Colors.white, fontSize: 16)),
-							onTap: () {
-								Navigator.push(
-									context,
-									MaterialPageRoute(
-										builder: (_) => UserProfilePage(
-											userId: _userId,
-											name: _userName,
-											email: _userEmail,
-											mobile: _mobile,
-											emailVerifiedAt: _emailVerifiedAt,
-											password: _password,
-											image: _userImage,
-											createdAt: _createdAt,
-											updatedAt: _updatedAt,
-											onUserUpdated:
-													(newName, newMobile, newPassword, newEmailVerifiedAt) async {
-												// أولاً: أرسل التحديث إلى السيرفر عبر UserService.updateUser
-												User updatedUser = User(
-													id: _userId,
-													name: newName,
-													mobile: newMobile,
-													email: _userEmail,
-													password: newPassword,
-													image: _userImage, // تم تحديثها لاحقاً
-													status: _status,
-													emailVerifiedAt: newEmailVerifiedAt,
-													rememberToken: _rememberToken,
-													accessToken: _accessToken,
-													createdAt: _createdAt,
-													updatedAt: DateTime.now().toIso8601String(),
-												);
-												String result = await UserService.updateUser(updatedUser);
-												if (!result.toLowerCase().contains('success')) {
-													ScaffoldMessenger.of(context).showSnackBar(
-														const SnackBar(
-															content: Text('فشل التحديث في السيرفر'),
-															backgroundColor: Colors.red,
-														),
-													);
-													return;
-												}
-
-												// ثم حدّث SharedPreferences
-												final prefs = await SharedPreferences.getInstance();
-												await prefs.setString('name', newName);
-												await prefs.setString('mobile', newMobile);
-												await prefs.setString('password', newPassword);
-												await prefs.setString('email_verified_at', newEmailVerifiedAt);
-												await prefs.setString(
-														'updated_at', updatedUser.updatedAt ?? '');
-
-												// حدّث بيانات الواجهة
-												setState(() {
-													_userName = newName;
-													_mobile = newMobile;
-													_password = newPassword;
-													_emailVerifiedAt = newEmailVerifiedAt;
-													_updatedAt = updatedUser.updatedAt ?? '';
-												});
-											},
-											onImageUpdated: _updateUserImage, // أضيفت
-										),
+							child: _isLoadingUser
+									? Center(child: CircularProgressIndicator(color: Colors.white))
+									: Column(
+								crossAxisAlignment: CrossAxisAlignment.start,
+								children: [
+									CircleAvatar(
+										radius: 40,
+										backgroundColor: Colors.white.withOpacity(0.9),
+										backgroundImage: userImageBytes != null
+												? MemoryImage(userImageBytes)
+												: null,
+										child: userImageBytes == null
+												? Icon(Icons.person, size: 45, color: primaryDrawerColor)
+												: null,
 									),
-								);
-							},
+									const SizedBox(height: 12),
+									Text(
+										user.name,
+										style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textDrawerColor, shadows: [Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))]),
+									),
+									const SizedBox(height: 4),
+									Text(
+										user.email,
+										style: TextStyle(fontSize: 14, color: textDrawerColor.withOpacity(0.8), shadows: [Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))]),
+									),
+								],
+							),
 						),
-						const Divider(color: Colors.white, height: 1, thickness: 0.5),
+						_buildDrawerItem(Icons.category_outlined, 'الأقسام', 0, _selectedIndex == 0),
+						_buildDrawerItem(Icons.store_mall_directory_outlined, 'المتاجر', 1, _selectedIndex == 1),
+						_buildDrawerItem(Icons.shopping_bag_outlined, 'جميع المنتجات', 2, _selectedIndex == 2),
+						_buildDrawerItem(Icons.shopping_cart_outlined, 'السلة', 3, _selectedIndex == 3),
+						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
+						_buildNavigationItem(Icons.edit_outlined, 'تعديل الملف الشخصي', _navigateToEditProfile),
+						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
 						ListTile(
-							leading: const Icon(Icons.support_agent, color: Colors.white, size: 28),
-							title: const Text('الدعم', style: TextStyle(color: Colors.white, fontSize: 16)),
-							onTap: () {
-								Navigator.push(
-									context,
-									MaterialPageRoute(builder: (_) => SupportPage()),
-								);
-							},
-						),
-						const Divider(color: Colors.white, height: 1, thickness: 0.5),
-						ListTile(
-							leading: const Icon(Icons.info, color: Colors.white, size: 28),
-							title: const Text('من نحن', style: TextStyle(color: Colors.white, fontSize: 16)),
-							onTap: () {
-								Navigator.push(
-									context,
-									MaterialPageRoute(builder: (_) => AboutUsPage()),
-								);
-							},
-						),
-						const Divider(color: Colors.white, height: 1, thickness: 0.5),
-						ListTile(
-							leading: const Icon(Icons.logout, color: Colors.red, size: 28),
-							title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontSize: 16)),
+							leading: Icon(Icons.logout, color: Colors.redAccent, size: 24),
+							title: Text('تسجيل الخروج', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
 							onTap: _logout,
+							dense: true,
+							contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
 						),
 					],
 				),
 			),
-			body: Container(
-				decoration: const BoxDecoration(
-					gradient: LinearGradient(
-						begin: Alignment.topCenter,
-						end: Alignment.bottomCenter,
-						colors: [lightBrown, Colors.white],
-					),
-				),
-				child: const Center(
-					child: Text(
-						'مرحبًا بك في الصفحة الرئيسية!',
-						style: TextStyle(
-							fontSize: 24,
-							fontWeight: FontWeight.bold,
-							color: darkBrown,
-						),
-					),
-				),
-			),
-		);
-	}
-}
-
-class UserProfilePage extends StatefulWidget {
-	final String userId;
-	final String name;
-	final String email;
-	final String mobile;
-	final String emailVerifiedAt;
-	final String password;
-	final String image;
-	final String createdAt;
-	final String updatedAt;
-	final Function(String, String, String, String) onUserUpdated;
-	final Function(String) onImageUpdated; // أضيفت
-
-	const UserProfilePage({
-		super.key,
-		required this.userId,
-		required this.name,
-		required this.email,
-		required this.mobile,
-		required this.emailVerifiedAt,
-		required this.password,
-		required this.image,
-		required this.createdAt,
-		required this.updatedAt,
-		required this.onUserUpdated,
-		required this.onImageUpdated, // أضيفت
-	});
-
-	@override
-	State<UserProfilePage> createState() => _UserProfilePageState();
-}
-
-class _UserProfilePageState extends State<UserProfilePage> {
-	late String _name;
-	late String _mobile;
-	late String _emailVerifiedAt;
-	late String _password;
-	late String _image; // أضيفت
-
-	@override
-	void initState() {
-		super.initState();
-		_name = widget.name;
-		_mobile = widget.mobile;
-		_emailVerifiedAt = widget.emailVerifiedAt;
-		_password = widget.password;
-		_image = widget.image; // أضيفت
-	}
-
-	Uint8List? _decodeBase64Image(String base64Image) {
-		try {
-			return base64Decode(base64Image);
-		} catch (_) {
-			return null;
-		}
-	}
-
-	// أضيفت: دالة اختيار الصورة
-	Future<void> _pickImage() async {
-		final picker = ImagePicker();
-		final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-		if (pickedFile != null) {
-			final bytes = await pickedFile.readAsBytes();
-			String base64Image = base64Encode(bytes);
-
-			// تحديث الصورة محلياً
-			setState(() {
-				_image = base64Image;
-			});
-
-			// إرسال التحديث للسيرفر
-			widget.onImageUpdated(base64Image);
-		}
-	}
-
-	void _showEditDialog() {
-		final _nameController = TextEditingController(text: _name);
-		final _mobileController = TextEditingController(text: _mobile);
-		final _emailVerifiedController =
-		TextEditingController(text: _emailVerifiedAt);
-		final _passwordController = TextEditingController(text: _password);
-
-		showDialog(
-			context: context,
-			builder: (context) => AlertDialog(
-				title: const Text('تعديل البيانات', style: TextStyle(color: primaryBrown)),
-				content: SingleChildScrollView(
-					child: Column(
-						mainAxisSize: MainAxisSize.min,
-						children: [
-							TextField(
-								controller: _nameController,
-								decoration: InputDecoration(
-									labelText: 'الاسم الكامل',
-									labelStyle: const TextStyle(color: primaryBrown),
-									border: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown),
-									),
-									focusedBorder: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown, width: 2),
-									),
-								),
-							),
-							const SizedBox(height: 15),
-							TextField(
-								controller: _mobileController,
-								keyboardType: TextInputType.phone,
-								decoration: InputDecoration(
-									labelText: 'رقم الجوال',
-									labelStyle: const TextStyle(color: primaryBrown),
-									border: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown),
-									),
-									focusedBorder: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown, width: 2),
-									),
-								),
-							),
-							const SizedBox(height: 15),
-							TextField(
-								controller: _passwordController,
-								obscureText: true,
-								decoration: InputDecoration(
-									labelText: 'كلمة المرور',
-									labelStyle: const TextStyle(color: primaryBrown),
-									border: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown),
-									),
-									focusedBorder: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown, width: 2),
-									),
-								),
-							),
-							const SizedBox(height: 15),
-							TextField(
-								controller: _emailVerifiedController,
-								decoration: InputDecoration(
-									labelText: 'تم التحقق من البريد',
-									labelStyle: const TextStyle(color: primaryBrown),
-									border: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown),
-									),
-									focusedBorder: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(10),
-										borderSide: const BorderSide(color: primaryBrown, width: 2),
-									),
-								),
-							),
-						],
-					),
-				),
-				actions: [
-					TextButton(
-						onPressed: () {
-							Navigator.of(context).pop();
-						},
-						child: const Text('إلغاء', style: TextStyle(color: Colors.red)),
-					),
-					ElevatedButton(
-						onPressed: () {
-							setState(() {
-								_name = _nameController.text.trim();
-								_mobile = _mobileController.text.trim();
-								_password = _passwordController.text.trim();
-								_emailVerifiedAt = _emailVerifiedController.text.trim();
-							});
-
-							// نرسل البيانات المحدثة للخارج لحفظها في السيرفر وSharedPreferences
-							widget.onUserUpdated(
-									_name, _mobile, _password, _emailVerifiedAt);
-
-							Navigator.of(context).pop();
-						},
-						style: ElevatedButton.styleFrom(
-							backgroundColor: primaryBrown,
-							shape: RoundedRectangleBorder(
-								borderRadius: BorderRadius.circular(10),
-							),
-						),
-						child: const Text('حفظ', style: TextStyle(color: Colors.white)),
-					),
-				],
+			body: IndexedStack(
+				index: _selectedIndex,
+				children: _pages,
 			),
 		);
 	}
 
+	Widget _buildDrawerItem(IconData icon, String title, int index, bool isSelected) {
+		return Material(
+			color: isSelected ? selectedTileColor : Colors.transparent,
+			child: ListTile(
+				leading: Icon(icon, color: isSelected ? Colors.white : iconDrawerColor, size: 24),
+				title: Text(
+					title,
+					style: TextStyle(
+						fontSize: 14,
+						fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+						color: textDrawerColor,
+					),
+				),
+				onTap: () => _onSelectItem(index),
+				dense: true,
+				contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+			),
+		);
+	}
+
+	Widget _buildNavigationItem(IconData icon, String title, VoidCallback onTap) {
+		return ListTile(
+			leading: Icon(icon, color: iconDrawerColor, size: 24),
+			title: Text(title, style: TextStyle(color: textDrawerColor, fontSize: 14)),
+			onTap: onTap,
+			dense: true,
+			contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+		);
+	}
+}
+
+// --- صفحة المنتجات الجديدة الافتراضية (مثال) ---
+class AllProductsPageNew extends StatelessWidget {
 	@override
 	Widget build(BuildContext context) {
-		return Scaffold(
-			appBar: AppBar(
-				title: const Text('ملفي الشخصي', style: TextStyle(color: Colors.white)),
-				backgroundColor: primaryBrown,
-				iconTheme: const IconThemeData(color: Colors.white),
-			),
-			body: Container(
-				decoration: const BoxDecoration(
-					gradient: LinearGradient(
-						begin: Alignment.topCenter,
-						end: Alignment.bottomCenter,
-						colors: [lightBrown, Colors.white],
-					),
-				),
-				child: SingleChildScrollView(
-					padding: const EdgeInsets.all(16),
-					child: Column(
-						children: [
-							Stack(
-								alignment: Alignment.bottomRight,
-								children: [
-									Container(
-										decoration: BoxDecoration(
-											shape: BoxShape.circle,
-											border: Border.all(color: primaryBrown, width: 3),
-										),
-										child: CircleAvatar(
-											radius: 60,
-											backgroundColor: Colors.transparent,
-											backgroundImage: _image.isNotEmpty
-													? MemoryImage(_decodeBase64Image(_image) ?? Uint8List(0))
-													: null,
-											child: _image.isEmpty
-													? const Icon(Icons.person, size: 60, color: primaryBrown)
-													: null,
-										),
-									),
-									Container(
-										decoration: const BoxDecoration(
-											shape: BoxShape.circle,
-											color: primaryBrown,
-										),
-										child: IconButton(
-											icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-											onPressed: _pickImage,
-										),
-									),
-								],
-							),
-							const SizedBox(height: 20),
-							_buildTile(Icons.person, 'الاسم الكامل', _name),
-							_buildTile(Icons.email, 'البريد الإلكتروني', widget.email),
-							_buildTile(Icons.phone, 'رقم الجوال', _mobile),
-							_buildTile(Icons.verified_user, 'تم التحقق من البريد', _emailVerifiedAt),
-							_buildTile(Icons.lock, 'كلمة المرور', _password),
-							_buildTile(Icons.calendar_today, 'تاريخ الإنشاء', widget.createdAt),
-							_buildTile(Icons.update, 'آخر تحديث', widget.updatedAt),
-							const SizedBox(height: 30),
-							ElevatedButton.icon(
-								onPressed: _showEditDialog,
-								icon: const Icon(Icons.edit, color: Colors.white),
-								label: const Text('تعديل البيانات', style: TextStyle(color: Colors.white)),
-								style: ElevatedButton.styleFrom(
-									backgroundColor: primaryBrown,
-									padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-									shape: RoundedRectangleBorder(
-										borderRadius: BorderRadius.circular(10),
-									),
-								),
-							),
-						],
-					),
-				),
-			),
-		);
-	}
-
-	Widget _buildTile(IconData icon, String label, String value) {
-		return Container(
-			margin: const EdgeInsets.symmetric(vertical: 8),
-			decoration: BoxDecoration(
-				color: Colors.white,
-				borderRadius: BorderRadius.circular(10),
-				border: Border.all(color: lightBrown),
-				boxShadow: [
-					BoxShadow(
-						color: Colors.grey.withOpacity(0.2),
-						spreadRadius: 1,
-						blurRadius: 3,
-						offset: const Offset(0, 2),
-					),
-				],
-			),
-			child: ListTile(
-				leading: Icon(icon, color: primaryBrown),
-				title: Text(
-					label,
-					style: const TextStyle(
-						fontWeight: FontWeight.bold,
-						fontSize: 16,
-						color: darkBrown,
-					),
-				),
-				subtitle: Text(
-					value.isNotEmpty ? value : 'غير متوفر',
-					style: const TextStyle(fontSize: 14, color: primaryBrown),
-				),
+		return Center(
+			child: Text(
+				'صفحة جميع المنتجات الجديدة',
+				style: Theme.of(context).textTheme.headlineMedium,
 			),
 		);
 	}
 }
+
+// --- قائمة السلة العامة (مثال) ---
+List<Map<String, dynamic>> cartItems = [];
+

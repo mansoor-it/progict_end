@@ -81,7 +81,7 @@ class MyApp extends StatelessWidget {
         }
         return supportedLocales.first;
       },
-        home:AdminHomePage(),
+        home:LoginPage(),
      // home: isLoggedIn ? const CategoriesScreen() : const LoginPage(),
     );
   }

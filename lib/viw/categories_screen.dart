@@ -1,13 +1,18 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // استيراد SharedPreferences
-
+import 'package:shared_preferences/shared_preferences.dart';
 import '../model/category_model.dart';
-import 'package:untitled2/viw/stores_screen.dart';
 import '../service/category_service.dart';
+import '../model/user_model.dart'; // <-- إضافة استيراد لنموذج المستخدم
 import 'login.dart';
+import 'stores_screen.dart';
 
+// --- تعديل هنا: استقبال المستخدم ---
 class CategoriesScreen extends StatefulWidget {
+	final User user; // <-- إضافة متغير لاستقبال المستخدم
+
+	const CategoriesScreen({Key? key, required this.user}) : super(key: key); // <-- تعديل المنشئ
+
 	@override
 	_CategoriesScreenState createState() => _CategoriesScreenState();
 }
@@ -19,76 +24,85 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 	bool isLoading = false;
 	final CategoryController _controller = CategoryController();
 	DisplayType _displayType = DisplayType.grid;
-	Category? selectedCategory;
-
-	// متغيرات لاسم المستخدم وصورته
-	String? username;
-	String? userImageBase64;
 
 	@override
 	void initState() {
 		super.initState();
-		fetchUserData(); // تحميل بيانات المستخدم من SharedPreferences
 		fetchCategories();
 	}
 
-	Future<void> fetchUserData() async {
-		final prefs = await SharedPreferences.getInstance();
-		setState(() {
-			username = prefs.getString('username') ?? 'مستخدم'; // قيمة افتراضية
-			userImageBase64 = prefs.getString('user_image_base64') ?? ''; // قد تكون فارغة
-		});
-	}
-
 	Future<void> fetchCategories() async {
+		if (!mounted) return;
 		setState(() => isLoading = true);
-		final fetched = await _controller.fetchCategories();
-		setState(() {
-			categories = fetched;
-			isLoading = false;
-		});
+		try {
+			final fetched = await _controller.fetchCategories();
+			if (mounted) {
+				setState(() {
+					categories = fetched;
+					isLoading = false;
+				});
+			}
+		} catch (e) {
+			if (mounted) {
+				setState(() => isLoading = false);
+				ScaffoldMessenger.of(context).showSnackBar(
+					SnackBar(content: Text('❌ خطأ في جلب الأقسام: ${e.toString()}')),
+				);
+			}
+		}
 	}
 
 	Future<void> _logout(BuildContext context) async {
 		final prefs = await SharedPreferences.getInstance();
-		await prefs.clear();
-		Navigator.pushReplacement(
+		await prefs.clear(); // مسح جميع بيانات الجلسة
+		if (!mounted) return;
+		Navigator.pushAndRemoveUntil(
 			context,
 			MaterialPageRoute(builder: (context) => LoginPage()),
+					(Route<dynamic> route) => false,
+		);
+	}
+
+	// --- تعديل هنا: تمرير المستخدم ---
+	void _navigateToStores(Category category) {
+		Navigator.push(
+			context,
+			MaterialPageRoute(
+				builder: (context) => StoresScreen(
+					categoryId: category.id,
+					categoryName: category.name,
+					user: widget.user, // <-- تمرير المستخدم هنا
+				),
+			),
 		);
 	}
 
 	Widget _buildCategoryCard(Category category) {
 		return GestureDetector(
-			onTap: () {
-				setState(() {
-					selectedCategory = category;
-				});
-			},
+			onTap: () => _navigateToStores(category), // <-- استخدام الدالة المساعدة
 			child: Card(
-				elevation: 8,
-				shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+				elevation: 6, // Reduced elevation for a subtle look
+				shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
 				margin: EdgeInsets.zero,
 				clipBehavior: Clip.antiAlias,
 				child: Column(
 					crossAxisAlignment: CrossAxisAlignment.stretch,
 					children: [
 						Expanded(
+							flex: 3, // Give more space to the image
 							child: Container(
-								decoration: BoxDecoration(
-									color: Colors.grey[300],
-									borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-								),
+								color: Colors.grey[200], // Placeholder color
 								child: category.image.isNotEmpty
 										? Image.memory(
-									base64Decode(category.image),
+									base64Decode(category.image.replaceAll(RegExp(r'^data:image/[^;]+;base64,'), '')), // Clean base64 string
 									fit: BoxFit.cover,
+									errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image, size: 40, color: Colors.grey.shade400),
 								)
-										: Icon(Icons.image, size: 60, color: Colors.grey.shade500),
+										: Icon(Icons.category_outlined, size: 50, color: Colors.grey.shade500),
 							),
 						),
 						Padding(
-							padding: const EdgeInsets.all(12.0),
+							padding: const EdgeInsets.all(10.0),
 							child: Column(
 								crossAxisAlignment: CrossAxisAlignment.start,
 								children: [
@@ -96,8 +110,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 										category.name,
 										style: TextStyle(
 											fontWeight: FontWeight.bold,
-											fontSize: 17,
-											color: Theme.of(context).primaryColor,
+											fontSize: 16,
+											color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black87,
 										),
 										maxLines: 1,
 										overflow: TextOverflow.ellipsis,
@@ -106,8 +120,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 									Text(
 										category.description,
 										style: TextStyle(
-											fontSize: 14,
-											color: Colors.grey[700],
+											fontSize: 13,
+											color: Colors.grey[600],
 										),
 										maxLines: 2,
 										overflow: TextOverflow.ellipsis,
@@ -125,11 +139,11 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 		return GridView.builder(
 			padding: const EdgeInsets.all(16),
 			itemCount: categories.length,
-			gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-				crossAxisCount: 2,
+			gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+				crossAxisCount: (MediaQuery.of(context).size.width / 180).floor().clamp(2, 4), // Responsive grid count
 				crossAxisSpacing: 16,
 				mainAxisSpacing: 16,
-				childAspectRatio: 0.8,
+				childAspectRatio: 0.85, // Adjust aspect ratio for better look
 			),
 			itemBuilder: (context, index) => _buildCategoryCard(categories[index]),
 		);
@@ -142,36 +156,44 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 			separatorBuilder: (_, __) => const SizedBox(height: 12),
 			itemBuilder: (context, index) {
 				final category = categories[index];
-				return ListTile(
-					onTap: () {
-						setState(() {
-							selectedCategory = category;
-						});
-					},
-					leading: category.image.isNotEmpty
-							? ClipRRect(
-						borderRadius: BorderRadius.circular(12),
-						child: Image.memory(
-							base64Decode(category.image),
-							width: 60,
-							height: 60,
-							fit: BoxFit.cover,
+				return Card(
+					elevation: 3,
+					shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+					clipBehavior: Clip.antiAlias,
+					child: ListTile(
+						onTap: () => _navigateToStores(category), // <-- استخدام الدالة المساعدة
+						leading: category.image.isNotEmpty
+								? ClipRRect(
+							borderRadius: BorderRadius.circular(8),
+							child: Image.memory(
+								base64Decode(category.image.replaceAll(RegExp(r'^data:image/[^;]+;base64,'), '')), // Clean base64 string
+								width: 55,
+								height: 55,
+								fit: BoxFit.cover,
+								errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image, size: 30, color: Colors.grey.shade400),
+							),
+						)
+								: Container(
+							width: 55, height: 55,
+							decoration: BoxDecoration(
+								color: Colors.grey[200],
+								borderRadius: BorderRadius.circular(8),
+							),
+							child: Icon(Icons.category_outlined, size: 30, color: Colors.grey.shade500),
 						),
-					)
-							: Icon(Icons.image, size: 60, color: Colors.grey),
-					title: Text(
-						category.name,
-						style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+						title: Text(
+							category.name,
+							style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+						),
+						subtitle: Text(
+							category.description,
+							maxLines: 2,
+							overflow: TextOverflow.ellipsis,
+							style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+						),
+						trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+						contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
 					),
-					subtitle: Text(
-						category.description,
-						maxLines: 2,
-						overflow: TextOverflow.ellipsis,
-						style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-					),
-					tileColor: Colors.white,
-					shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-					contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
 				);
 			},
 		);
@@ -179,17 +201,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
 	Widget _buildHorizontalView() {
 		return Container(
-			height: 230,
-			padding: const EdgeInsets.symmetric(vertical: 12),
+			height: 240, // Increased height slightly
+			padding: const EdgeInsets.symmetric(vertical: 16),
 			child: ListView.separated(
 				padding: const EdgeInsets.symmetric(horizontal: 16),
 				scrollDirection: Axis.horizontal,
 				itemCount: categories.length,
-				separatorBuilder: (_, __) => const SizedBox(width: 16),
+				separatorBuilder: (_, __) => const SizedBox(width: 12),
 				itemBuilder: (context, index) {
 					final category = categories[index];
 					return SizedBox(
-						width: 180,
+						width: 160, // Adjusted width
 						child: _buildCategoryCard(category),
 					);
 				},
@@ -199,13 +221,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
 	Widget _buildHeader() {
 		return Container(
-			padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+			padding: const EdgeInsets.fromLTRB(20, 20, 20, 15),
 			decoration: BoxDecoration(
-				color: Theme.of(context).primaryColor,
-				borderRadius: BorderRadius.only(
-					bottomLeft: Radius.circular(25),
-					bottomRight: Radius.circular(25),
-				),
+					color: Theme.of(context).primaryColor,
+					// Optional: Add gradient or image background
+					// gradient: LinearGradient(colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColorDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+					borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+					boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 5, offset: Offset(0, 2))]
 			),
 			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,175 +235,93 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 					Text(
 						"اكتشف أقسامنا",
 						style: TextStyle(
-							fontSize: 24,
+							fontSize: 22, // Slightly smaller
 							fontWeight: FontWeight.bold,
 							color: Colors.white,
 						),
 					),
-					SizedBox(height: 6),
+					SizedBox(height: 4),
 					Text(
 						"تصفح المنتجات حسب القسم الذي يناسبك",
 						style: TextStyle(
-							fontSize: 15,
-							color: Colors.white70,
-						),
-					),
-				],
-			),
-		);
-	}
-
-	Widget _buildFooter() {
-		return Container(
-			padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-			decoration: BoxDecoration(
-				color: Theme.of(context).primaryColor.withOpacity(0.1),
-				border: Border(
-					top: BorderSide(color: Colors.grey.shade300),
-				),
-			),
-			child: Row(
-				mainAxisAlignment: MainAxisAlignment.spaceBetween,
-				children: [
-					Text(
-						"جميع الحقوق محفوظة © 2025",
-						style: TextStyle(
 							fontSize: 14,
-							color: Colors.grey[600],
+							color: Colors.white.withOpacity(0.85),
 						),
-					),
-					Row(
-						children: [
-							Icon(Icons.facebook, color: Colors.blue, size: 20),
-							SizedBox(width: 10),
-							Icon(Icons.shopping_bag, color: Theme.of(context).primaryColor, size: 20),
-						],
 					),
 				],
 			),
 		);
 	}
 
-	// ** اضافة الدروار (Drawer) **
-	Widget _buildDrawer() {
-		return Drawer(
-			child: Column(
-				children: [
-					UserAccountsDrawerHeader(
-						decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-						accountName: Text(
-							username ?? 'مستخدم',
-							style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-						),
-						accountEmail: null,
-						currentAccountPicture: userImageBase64 != null && userImageBase64!.isNotEmpty
-								? CircleAvatar(
-							backgroundImage: MemoryImage(base64Decode(userImageBase64!)),
-						)
-								: CircleAvatar(
-							child: Icon(Icons.person, size: 40),
-						),
-					),
-					Expanded(
-						child: ListView.builder(
-							itemCount: categories.length,
-							itemBuilder: (context, index) {
-								final category = categories[index];
-								return ListTile(
-									leading: category.image.isNotEmpty
-											? CircleAvatar(
-										backgroundImage: MemoryImage(base64Decode(category.image)),
-									)
-											: Icon(Icons.image),
-									title: Text(category.name),
-									onTap: () {
-										setState(() {
-											selectedCategory = category;
-											Navigator.pop(context); // غلق القائمة بعد اختيار القسم
-										});
-									},
-								);
-							},
-						),
-					),
-				],
-			),
-		);
-	}
+	// Footer is removed as it's usually part of the main scaffold (like in HomePage)
+	/*
+  Widget _buildFooter() { ... }
+  */
 
 	@override
 	Widget build(BuildContext context) {
-		return Scaffold(
-			drawer: _buildDrawer(),  // إضافة الدروار هنا
-			backgroundColor: Colors.grey[200],
-			appBar: AppBar(
-				title: Text("الأقسام"),
-				backgroundColor: Theme.of(context).primaryColor,
-				leading: Builder(
-					builder: (context) => IconButton(
-						icon: Icon(Icons.menu),
-						onPressed: () => Scaffold.of(context).openDrawer(),
-						tooltip: 'القائمة',
-					),
-				),
-				actions: [
-					IconButton(
-						icon: Icon(Icons.grid_view),
-						color: _displayType == DisplayType.grid ? Colors.white : Colors.white60,
-						onPressed: () => setState(() => _displayType = DisplayType.grid),
-					),
-					IconButton(
-						icon: Icon(Icons.list),
-						color: _displayType == DisplayType.list ? Colors.white : Colors.white60,
-						onPressed: () => setState(() => _displayType = DisplayType.list),
-					),
-					IconButton(
-						icon: Icon(Icons.view_carousel),
-						color: _displayType == DisplayType.horizontal ? Colors.white : Colors.white60,
-						onPressed: () => setState(() => _displayType = DisplayType.horizontal),
-					),
+		// يمكنك الوصول إلى بيانات المستخدم هنا عبر widget.user
+		// مثال: widget.user.name
 
-					// زر تسجيل الخروج
-					IconButton(
-						icon: Icon(Icons.logout),
-						tooltip: 'تسجيل خروج',
-						onPressed: () {
-							_logout(context);
-						},
-					),
-				],
-			),
-			body: Row(
+		return Scaffold(
+			backgroundColor: Colors.grey[100], // Lighter background
+			// AppBar is removed as this screen is likely shown within HomePage's body
+			/*
+      appBar: AppBar(
+        title: Text("الأقسام"),
+        backgroundColor: Theme.of(context).primaryColor,
+        actions: [ ... display type buttons ... ],
+      ),
+      */
+			body: Column(
 				children: [
-					Expanded(
-						flex: 2,
-						child: Column(
+					// Header can be optional if this screen is part of another page
+					// _buildHeader(),
+					Padding(
+						padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+						child: Row(
+							mainAxisAlignment: MainAxisAlignment.end,
 							children: [
-								_buildHeader(),
-								Expanded(
-									child: isLoading
-											? Center(child: CircularProgressIndicator())
-											: _displayType == DisplayType.grid
-											? _buildGridView()
-											: _displayType == DisplayType.list
-											? _buildListView()
-											: _buildHorizontalView(),
+								IconButton(
+									icon: Icon(Icons.grid_view_outlined),
+									color: _displayType == DisplayType.grid ? Theme.of(context).primaryColor : Colors.grey,
+									tooltip: 'عرض شبكي',
+									onPressed: () => setState(() => _displayType = DisplayType.grid),
 								),
-								_buildFooter(),
+								IconButton(
+									icon: Icon(Icons.view_list_outlined),
+									color: _displayType == DisplayType.list ? Theme.of(context).primaryColor : Colors.grey,
+									tooltip: 'عرض قائمة',
+									onPressed: () => setState(() => _displayType = DisplayType.list),
+								),
+								IconButton(
+									icon: Icon(Icons.view_carousel_outlined),
+									color: _displayType == DisplayType.horizontal ? Theme.of(context).primaryColor : Colors.grey,
+									tooltip: 'عرض أفقي',
+									onPressed: () => setState(() => _displayType = DisplayType.horizontal),
+								),
 							],
 						),
 					),
-					if (selectedCategory != null)
-						Expanded(
-							flex: 3,
-							child: StoresScreen(
-								categoryId: selectedCategory!.id,
-								categoryName: selectedCategory!.name,
-							),
-
+					Expanded(
+						child: isLoading
+								? Center(child: CircularProgressIndicator())
+								: categories.isEmpty
+								? Center(child: Text('لا توجد أقسام متاحة حاليًا.', style: TextStyle(color: Colors.grey[600], fontSize: 16)))
+								: AnimatedSwitcher(
+							duration: Duration(milliseconds: 300),
+							child: _displayType == DisplayType.grid
+									? _buildGridView()
+									: _displayType == DisplayType.list
+									? _buildListView()
+									: _buildHorizontalView(),
 						),
+					),
+					// Footer is removed
+					// _buildFooter(),
 				],
 			),
 		);
 	}
 }
+

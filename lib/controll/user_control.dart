@@ -54,7 +54,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
 					: _users.where((user) =>
 			user.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
 					user.email.toLowerCase().contains(searchQuery.toLowerCase()) ||
-					user.mobile.contains(searchQuery)).toList();
+					(user.mobile != null && user.mobile!.contains(searchQuery))
+			).toList();
 		});
 	}
 
@@ -71,8 +72,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
 	// اختيار صورة من المعرض
 	Future<String?> _pickImage() async {
 		try {
-			final pickedImage =
-			await ImagePicker().pickImage(source: ImageSource.gallery);
+			final pickedImage = await ImagePicker().pickImage(source: ImageSource.gallery);
 			if (pickedImage == null) return null;
 			return base64.encode(await File(pickedImage.path).readAsBytes());
 		} catch (e) {
@@ -104,16 +104,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
 	// عرض نموذج إضافة/تعديل مستخدم
 	void _showUserForm({User? user}) {
 		final formKey = GlobalKey<FormState>();
-		TextEditingController nameController =
-		TextEditingController(text: user?.name ?? '');
-		TextEditingController mobileController =
-		TextEditingController(text: user?.mobile ?? '');
-		TextEditingController emailController =
-		TextEditingController(text: user?.email ?? '');
-		TextEditingController passwordController =
-		TextEditingController(text: user?.password ?? '');
-		TextEditingController statusController =
-		TextEditingController(text: user?.status ?? '1');
+		TextEditingController nameController = TextEditingController(text: user?.name ?? '');
+		TextEditingController mobileController = TextEditingController(text: user?.mobile ?? '');
+		TextEditingController emailController = TextEditingController(text: user?.email ?? '');
+		TextEditingController passwordController = TextEditingController(text: '');
+		TextEditingController statusController = TextEditingController(text: user?.status ?? '1');
 		String imageBase64 = user?.image ?? '';
 
 		showDialog(
@@ -132,8 +127,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
 										GestureDetector(
 											onTap: () async {
 												String? image = await _pickImage();
-												if (image != null)
-													setStateDialog(() => imageBase64 = image);
+												if (image != null) setStateDialog(() => imageBase64 = image);
 											},
 											child: CircleAvatar(
 												radius: 50,
@@ -151,37 +145,33 @@ class _UserManagementPageState extends State<UserManagementPage> {
 										// حقل الاسم
 										TextFormField(
 											controller: nameController,
-											decoration:
-											const InputDecoration(labelText: 'الاسم الكامل'),
-											validator: (value) => value!.isEmpty ? 'مطلوب' : null,
+											decoration: const InputDecoration(labelText: 'الاسم الكامل'),
+											validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
 										),
 
 										// حقل الجوال
 										TextFormField(
 											controller: mobileController,
-											decoration:
-											const InputDecoration(labelText: 'رقم الجوال'),
+											decoration: const InputDecoration(labelText: 'رقم الجوال'),
 											keyboardType: TextInputType.phone,
-											validator: (value) => value!.isEmpty ? 'مطلوب' : null,
+											validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
 										),
 
 										// حقل البريد الإلكتروني
 										TextFormField(
 											controller: emailController,
-											decoration:
-											const InputDecoration(labelText: 'البريد الإلكتروني'),
+											decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
 											keyboardType: TextInputType.emailAddress,
-											validator: (value) => value!.isEmpty ? 'مطلوب' : null,
+											validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
 										),
 
 										// حقل كلمة المرور (يظهر فقط عند الإضافة)
 										if (user == null) ...[
 											TextFormField(
 												controller: passwordController,
-												decoration:
-												const InputDecoration(labelText: 'كلمة المرور'),
+												decoration: const InputDecoration(labelText: 'كلمة المرور'),
 												obscureText: true,
-												validator: (value) => value!.isEmpty ? 'مطلوب' : null,
+												validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
 											),
 										],
 
@@ -189,13 +179,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
 										DropdownButtonFormField<String>(
 											value: statusController.text,
 											items: const [
-												DropdownMenuItem(value: '1', child: Text('مفعل')),
-												DropdownMenuItem(value: '0', child: Text('غير مفعل')),
+												DropdownMenuItem(value: 'active', child: Text('Active')),
+												DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
 											],
-											onChanged: (value) =>
-											statusController.text = value ?? '1',
-											decoration:
-											const InputDecoration(labelText: 'حالة الحساب'),
+											onChanged: (value) => statusController.text = value ?? 'active',
+											decoration: const InputDecoration(labelText: 'حالة الحساب'),
 										),
 									],
 								),
@@ -217,25 +205,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
 									try {
 										String result;
 										if (user == null) {
-											// عند الإضافة، استخدام المُنشئ create لتعيين createdAt و updatedAt تلقائيًا
+											// إضافة مستخدم جديد
 											User newUser = User.create(
-												id: '0', // يمكنك تعديل القيمة وفق نظام إدارة المستخدمين لديك
+												id: '0',
 												name: nameController.text,
 												mobile: mobileController.text,
 												email: emailController.text,
 												password: passwordController.text,
 												image: imageBase64,
 												status: statusController.text,
-												// الحقول الاختيارية تُترك فارغة أو تُمرر حسب الحاجة
 											);
 											result = await UserService.addUser(newUser);
 										} else {
-											// عند التعديل، استخدام copyWith لتحديث البيانات مع الحفاظ على createdAt وتحديث updatedAt تلقائيًا
+											// تحديث مستخدم موجود
 											User updatedUser = user.copyWith(
 												name: nameController.text,
 												mobile: mobileController.text,
 												email: emailController.text,
-												password: passwordController.text,
+												password: passwordController.text.isEmpty ? user.password : passwordController.text,
 												image: imageBase64,
 												status: statusController.text,
 											);
@@ -328,27 +315,23 @@ class _UserManagementPageState extends State<UserManagementPage> {
 							itemBuilder: (context, index) {
 								User user = _filteredUsers[index];
 								return Card(
-									margin: const EdgeInsets.symmetric(
-											horizontal: 16, vertical: 8),
+									margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
 									child: ListTile(
 										leading: CircleAvatar(
 											backgroundImage: user.image.isNotEmpty
-													? MemoryImage(
-													_decodeBase64Image(user.image)!)
+													? MemoryImage(_decodeBase64Image(user.image)!)
 													: null,
-											child: user.image.isEmpty
-													? const Icon(Icons.person)
-													: null,
+											child: user.image.isEmpty ? const Icon(Icons.person) : null,
 										),
 										title: Text(user.name),
 										subtitle: Column(
 											crossAxisAlignment: CrossAxisAlignment.start,
 											children: [
 												Text(user.email),
-												Text(user.mobile),
-												Text('تاريخ الإنشاء: ${user.createdAt}'),
+												Text(user.mobile ?? ''),
+												Text('تاريخ الإنشاء: ${user.createdAt ?? '-'}'),
 												if (user.updatedAt != null)
-													Text('آخر تحديث: ${user.updatedAt}'),
+													Text('آخر تحديث: ${user.updatedAt!}'),
 											],
 										),
 										trailing: Row(
@@ -360,7 +343,28 @@ class _UserManagementPageState extends State<UserManagementPage> {
 												),
 												IconButton(
 													icon: const Icon(Icons.delete, color: Colors.red),
-													onPressed: () => _deleteUser(user.id),
+													onPressed: () {
+														showDialog(
+															context: context,
+															builder: (context) => AlertDialog(
+																title: const Text('تأكيد الحذف'),
+																content: const Text('هل تريد حذف هذا المستخدم؟'),
+																actions: [
+																	TextButton(
+																		onPressed: () => Navigator.pop(context),
+																		child: const Text('إلغاء'),
+																	),
+																	ElevatedButton(
+																		onPressed: () {
+																			Navigator.pop(context);
+																			_deleteUser(user.id);
+																		},
+																		child: const Text('حذف'),
+																	),
+																],
+															),
+														);
+													},
 												),
 											],
 										),
@@ -372,8 +376,9 @@ class _UserManagementPageState extends State<UserManagementPage> {
 				],
 			),
 			floatingActionButton: FloatingActionButton(
-				child: const Icon(Icons.add),
 				onPressed: () => _showUserForm(),
+				child: const Icon(Icons.add),
+				tooltip: 'إضافة مستخدم جديد',
 			),
 		);
 	}

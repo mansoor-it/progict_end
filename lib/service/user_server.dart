@@ -43,7 +43,42 @@ class UserService {
 			return null; // لم يتم العثور على المستخدم
 		}
 	}
+	// --- دالة جديدة لجلب بيانات المستخدم بواسطة ID ---
+	static Future<User?> fetchUserDataById(String userId) async {
+		final url = Uri.parse('${ApiHelper.url('api_user.php')}/$userId');
+		try {
+			final response = await http.get(url, headers: {
+				'Content-Type': 'application/json; charset=UTF-8',
+				'Accept': 'application/json',
+			});
 
+			print('Response code: ${response.statusCode}');
+			print('Response body: ${response.body}');
+
+			if (response.statusCode == 200) {
+				final responseBody = utf8.decode(response.bodyBytes);
+				final List<dynamic> data = jsonDecode(responseBody); // استخدم List بدلاً من Map
+
+				// طباعة البيانات المسترجعة
+				print('Fetched data: $data');
+
+				// البحث عن المستخدم في القائمة
+				final user = data.firstWhere((user) => user['id'].toString() == userId, orElse: () => null);
+				if (user != null) {
+					return User.fromJson(user);
+				} else {
+					print('User not found in response');
+					return null;
+				}
+			} else {
+				print('Failed to load user data. Status code: ${response.statusCode}');
+				return null;
+			}
+		} catch (e) {
+			print('Error fetching user data by ID: $e');
+			return null;
+		}
+	}
 	static Future<List<User>> getAllUsers() async {
 		try {
 			var map = {'action': _fetch};
@@ -131,6 +166,38 @@ class UserService {
 			return null;
 		} catch (e, stackTrace) {
 			print('Exception in loginUser: $e');
+			print('StackTrace: $stackTrace');
+			return null;
+		}
+	}
+// داخل كلاس UserService:
+	static Future<User?> getUserById(String userId) async {
+		try {
+			// نجلب جميع المستخدمين من السيرفر
+			var map = {'action': _fetch};
+			final response = await http.post(url, body: map);
+			print('getUserById: response code: ${response.statusCode}');
+			print('getUserById: response body: ${response.body}');
+
+			if (response.statusCode == 200) {
+				// نفترض أن الـ API يعيد قائمة JSON من المستخدمين
+				final List parsed = json.decode(response.body);
+				// نحول كل JSON إلى كائن User
+				final users = parsed.map<User>((json) => User.fromJson(json)).toList();
+
+				// نبحث عن المستخدم الذي يطابق معرفه
+				try {
+					return users.firstWhere((user) => user.id.toString() == userId);
+				} catch (e) {
+					print('User not found for ID: $userId');
+					return null;
+				}
+			} else {
+				print('Failed to fetch users. Status code: ${response.statusCode}');
+				return null;
+			}
+		} catch (e, stackTrace) {
+			print('Exception in getUserById: $e');
 			print('StackTrace: $stackTrace');
 			return null;
 		}

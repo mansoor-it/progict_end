@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../HomeDrawerScaffold.dart';
 import '../model/user_model.dart';
 import '../service/user_server.dart';
+import 'AllProductsPage.dart';
 import 'SignUpPage.dart';
 
 class LoginPage extends StatefulWidget {
@@ -187,10 +188,16 @@ class _LoginPageState extends State<LoginPage> {
 	}
 
 	void _goToHome(User user) {
+		if (!mounted) return;
 		Navigator.of(context).pushReplacement(
-			MaterialPageRoute(builder: (_) => HomeDrawerScaffold()),
+			MaterialPageRoute(
+				// تمرير كائن المستخدم إلى HomeDrawerScaffold
+				// تأكد من أن HomeDrawerScaffold يقبل معامل 'user'
+				builder: (_) => HomeDrawerScaffold(user: user),
+			),
 		);
 	}
+
 
 	void _goToRegister() {
 		Navigator.push(

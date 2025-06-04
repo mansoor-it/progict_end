@@ -59,8 +59,9 @@ class CartController extends ChangeNotifier {
 			try {
 				final data = jsonDecode(response.body);
 				if (data['success'] == true) {
-					_items.add(item);
-					notifyListeners();
+					// لا نضيف العنصر هنا مباشرة، بل نعتمد على fetchCartItems لتحديث القائمة
+					// _items.add(item);
+					// notifyListeners();
 					return true;
 				}
 				return false;
@@ -147,21 +148,23 @@ class CartController extends ChangeNotifier {
 	}
 
 	/// دالة لإضافة عنصر إلى السلة باستخدام تفاصيل المنتج
-	/// دالة لإضافة عنصر إلى السلة باستخدام تفاصيل المنتج
 	Future<bool> addCartItem({
 		required String userId,
 		required String productId,
 		required String quantity,
 		required String unitPrice,
-		required String storeId, // ← تمت الإضافة هنا
+		required String storeId,
+		String? productColorId,
+		String? productSizeId,
+		String? productImage,
 	}) async {
 		if (kDebugMode) {
-			print('>>> CartController.addCartItem args: userId=$userId, productId=$productId, quantity=$quantity, unitPrice=$unitPrice, storeId=$storeId');
+			print('>>> CartController.addCartItem args: userId=$userId, productId=$productId, quantity=$quantity, unitPrice=$unitPrice, storeId=$storeId, productColorId=$productColorId, productSizeId=$productSizeId, productImage=$productImage');
 		}
 
-		// تأكد من أن البيانات المرسلة صالحة قبل إرسالها
-		if (quantity == "0" || unitPrice == "0.00") {
-			throw Exception("الكمية أو السعر غير صحيح.");
+		// Validate input data
+		if (quantity.isEmpty || unitPrice.isEmpty || double.tryParse(quantity) == 0 || double.tryParse(unitPrice) == 0) {
+			throw Exception("الكمية أو السعر غير صحيحة.");
 		}
 
 		final item = CartItemModel.create(
@@ -170,7 +173,12 @@ class CartController extends ChangeNotifier {
 			productId: productId,
 			quantity: quantity,
 			unitPrice: unitPrice,
-			storeId: storeId, // ← تمت الإضافة هنا
+			storeId: storeId,
+			productColorId: productColorId,
+			productSizeId: productSizeId,
+			productImage: productImage,
+			color: productColorId ?? 'defaultColor',
+			size: productSizeId ?? 'defaultSize',
 		);
 
 		return await addToCart(item);
@@ -213,3 +221,4 @@ class CartController extends ChangeNotifier {
 		}
 	}
 }
+

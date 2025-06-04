@@ -6,7 +6,7 @@ class CartItemModel {
 	final String productId;
 	final String? productSizeId;
 	final String? productColorId;
-	final String? productImage; // ✅ يمكن أن تكون Base64 أو URL
+	final String? productImage; // يمكن أن تكون Base64 أو URL
 	final String unitPrice;
 	final String quantity;
 	final String totalPrice;
@@ -15,6 +15,12 @@ class CartItemModel {
 	final String createdAt;
 	final String updatedAt;
 	final String? storeId;
+
+	final String? colorId;    // Keep ID if needed
+	final String? colorName;  // Add name
+	final String? sizeId;     // Keep ID if needed
+	final String? sizeName;   // Add name
+	final String? productName; // Add product name
 
 	CartItemModel({
 		required this.id,
@@ -31,6 +37,11 @@ class CartItemModel {
 		required this.createdAt,
 		required this.updatedAt,
 		this.storeId,
+		this.colorId,
+		this.colorName,
+		this.sizeId,
+		this.sizeName,
+		this.productName,
 	});
 
 	factory CartItemModel.create({
@@ -42,6 +53,8 @@ class CartItemModel {
 		String? productImage,
 		required String unitPrice,
 		required String quantity,
+		required String color, // Added color parameter
+		required String size,   // Added size parameter
 		String? sessionId,
 		String? warningMessage,
 		String? storeId,
@@ -71,6 +84,8 @@ class CartItemModel {
 			createdAt: now,
 			updatedAt: now,
 			storeId: storeId,
+			colorId: color, // Corrected to colorId
+			sizeId: size,   // Corrected to sizeId
 		);
 	}
 
@@ -87,6 +102,8 @@ class CartItemModel {
 		String? sessionId,
 		String? warningMessage,
 		String? storeId,
+		String? colorId, // Updated parameter name
+		String? sizeId,  // Updated parameter name
 	}) {
 		final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 		final newTotal = (unitPrice ?? this.unitPrice) != null && (quantity ?? this.quantity) != null
@@ -108,6 +125,8 @@ class CartItemModel {
 			createdAt: this.createdAt,
 			updatedAt: now,
 			storeId: storeId ?? this.storeId,
+			colorId: colorId ?? this.colorId, // Updated parameter name
+			sizeId: sizeId ?? this.sizeId,     // Updated parameter name
 		);
 	}
 
@@ -127,6 +146,10 @@ class CartItemModel {
 			createdAt: json['created_at'] ?? '',
 			updatedAt: json['updated_at'] ?? '',
 			storeId: json['store_id']?.toString(),
+			colorName: json['color_name']?.toString(), // Get color name
+			sizeId: json['size_id']?.toString(),       // Get size ID
+			sizeName: json['size_name']?.toString(),   // Get size name
+			productName: json['product_name']?.toString(), // Get product name
 		);
 	}
 
@@ -146,6 +169,11 @@ class CartItemModel {
 			'created_at': createdAt,
 			'updated_at': updatedAt,
 			'store_id': storeId,
+			'color_id': colorId, // Corrected key name
+			'color_name': colorName,
+			'size_id': sizeId,   // Corrected key name
+			'size_name': sizeName,
+			'product_name': productName,
 		};
 	}
 

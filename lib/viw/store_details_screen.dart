@@ -1,15 +1,18 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../model/stor_model.dart';
-import 'ProductDetailsPage.dart';
+import '../model/stor_model.dart'; // تأكد من صحة المسار
+import 'ProductDetailsPage.dart'; // تأكد من صحة المسار
+import '../model/user_model.dart'; // <-- إضافة استيراد لنموذج المستخدم
 
 class StoreDetailsScreen extends StatelessWidget {
 	final Store store;
+	final User user; // <-- إضافة متغير لاستقبال المستخدم
 
-	StoreDetailsScreen({required this.store});
+	StoreDetailsScreen({required this.store, required this.user}); // <-- تعديل المنشئ
 
 	String cleanBase64(String base64Image) {
-		final regex = RegExp(r'data:image/[^;]+;base64,');
+		// إزالة بادئة البيانات إذا كانت موجودة
+		final regex = RegExp(r'^data:image/[^;]+;base64,');
 		return base64Image.replaceAll(regex, '');
 	}
 
@@ -86,7 +89,7 @@ class StoreDetailsScreen extends StatelessWidget {
 												),
 											),
 										),
-										SizedBox(width: 48),
+										SizedBox(width: 48), // للحفاظ على التوسيط
 									],
 								),
 							),
@@ -96,29 +99,35 @@ class StoreDetailsScreen extends StatelessWidget {
 									child: Column(
 										crossAxisAlignment: CrossAxisAlignment.start,
 										children: [
-											if (store.storeImage.isNotEmpty)
-												Center(
-													child: Container(
-														width: 180,
-														height: 180,
-														decoration: BoxDecoration(
-															shape: BoxShape.circle,
-															boxShadow: [
-																BoxShadow(
-																	color: Colors.deepPurple.withOpacity(0.6),
-																	blurRadius: 20,
-																	offset: Offset(0, 8),
-																)
-															],
-															image: DecorationImage(
-																image: MemoryImage(
-																	base64Decode(cleanBase64(store.storeImage)),
-																),
-																fit: BoxFit.cover,
+											// عرض صورة المتجر بشكل آمن
+											Center(
+												child: Container(
+													width: 180,
+													height: 180,
+													decoration: BoxDecoration(
+														shape: BoxShape.circle,
+														boxShadow: [
+															BoxShadow(
+																color: Colors.deepPurple.withOpacity(0.6),
+																blurRadius: 20,
+																offset: Offset(0, 8),
+															)
+														],
+														image: store.storeImage.isNotEmpty
+																? DecorationImage(
+															image: MemoryImage(
+																base64Decode(cleanBase64(store.storeImage)),
 															),
-														),
+															fit: BoxFit.cover,
+														)
+																: null,
+														color: store.storeImage.isEmpty ? Colors.grey[300] : null,
 													),
+													child: store.storeImage.isEmpty
+															? Icon(Icons.store, size: 80, color: Colors.grey[600])
+															: null,
 												),
+											),
 											SizedBox(height: 30),
 
 											Text(
@@ -235,10 +244,11 @@ class StoreDetailsScreen extends StatelessWidget {
 																		),
 																	),
 																	SizedBox(height: 12),
+																	// التأكد من أن التقييم ليس null قبل محاولة تحويله
 																	store.rating != null
 																			? Row(
 																		mainAxisAlignment: MainAxisAlignment.center,
-																		children: _buildStarRating(double.tryParse("${store.rating}") ?? 0.0),
+																		children: _buildStarRating(double.tryParse(store.rating) ?? 0.0),
 																	)
 																			: Text(
 																		"غير متوفر",
@@ -264,6 +274,7 @@ class StoreDetailsScreen extends StatelessWidget {
 																builder: (context) => AllProductsPage(
 																	storeId: store.id,
 																	storeName: store.name,
+																	user: user, // <-- تمرير المستخدم هنا
 																),
 															),
 														);
@@ -301,3 +312,4 @@ class StoreDetailsScreen extends StatelessWidget {
 		);
 	}
 }
+

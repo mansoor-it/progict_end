@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../ApiConfig.dart';
 import 'ProductDetailsPage.dart';
+import '../model/user_model.dart'; // <-- إضافة استيراد لنموذج المستخدم
 
 class Store {
 	final String id;
@@ -50,6 +51,10 @@ class Store {
 }
 
 class SimpleStoreListPage extends StatefulWidget {
+	final User user; // <-- إضافة متغير لاستقبال المستخدم
+
+	const SimpleStoreListPage({Key? key, required this.user}) : super(key: key); // <-- تعديل المنشئ
+
 	@override
 	_SimpleStoreListPageState createState() => _SimpleStoreListPageState();
 }
@@ -72,18 +77,26 @@ class _SimpleStoreListPageState extends State<SimpleStoreListPage> {
 			final resp = await http.get(Uri.parse('$apiUrl?action=fetch'));
 			if (resp.statusCode == 200) {
 				final data = json.decode(resp.body) as List;
-				setState(() => _stores = data.map((e) => Store.fromJson(e)).toList());
+				if (mounted) {
+					setState(() => _stores = data.map((e) => Store.fromJson(e)).toList());
+				}
 			} else {
-				ScaffoldMessenger.of(context).showSnackBar(
-					SnackBar(content: Text('❌ خطأ في جلب البيانات')),
-				);
+				if (mounted) {
+					ScaffoldMessenger.of(context).showSnackBar(
+						SnackBar(content: Text('❌ خطأ في جلب البيانات: ${resp.statusCode}')),
+					);
+				}
 			}
 		} catch (e) {
-			ScaffoldMessenger.of(context).showSnackBar(
-				SnackBar(content: Text('❌ حدث خطأ: $e')),
-			);
+			if (mounted) {
+				ScaffoldMessenger.of(context).showSnackBar(
+					SnackBar(content: Text('❌ حدث خطأ: $e')),
+				);
+			}
 		} finally {
-			setState(() => _isLoading = false);
+			if (mounted) {
+				setState(() => _isLoading = false);
+			}
 		}
 	}
 
@@ -127,7 +140,7 @@ class _SimpleStoreListPageState extends State<SimpleStoreListPage> {
 						: _stores.isEmpty
 						? Center(
 					child: Text(
-						'لا توجد بيانات',
+						'لا توجد بيانات متاحة حاليًا.',
 						style: theme.textTheme.titleLarge!.copyWith(
 							color: Colors.deepPurple.shade700,
 							fontWeight: FontWeight.bold,
@@ -151,6 +164,7 @@ class _SimpleStoreListPageState extends State<SimpleStoreListPage> {
 										builder: (context) => AllProductsPage(
 											storeId: store.id,
 											storeName: store.name,
+											user: widget.user, // <-- تمرير المستخدم هنا
 										),
 									),
 								);
@@ -245,6 +259,7 @@ class _SimpleStoreListPageState extends State<SimpleStoreListPage> {
 															builder: (context) => AllProductsPage(
 																storeId: store.id,
 																storeName: store.name,
+																user: widget.user, // <-- تمرير المستخدم هنا
 															),
 														),
 													);
@@ -282,3 +297,4 @@ class _SimpleStoreListPageState extends State<SimpleStoreListPage> {
 		);
 	}
 }
+
