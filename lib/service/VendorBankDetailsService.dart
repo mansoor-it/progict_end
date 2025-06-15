@@ -84,4 +84,61 @@ class VendorService {
 			return 'error';
 		}
 	}
+
+
+	// ✅ الدالة: الحصول على البائع عن طريق الإيميل
+	static Future<Vendor?> getVendorByEmail(String email) async {
+		try {
+			final response = await http.post(
+				Uri.parse(ApiHelper.url('api_allvendors.php')),
+				body: {'email': email},
+			);
+			print('getVendorByEmail: ${response.body}');
+			if (response.statusCode == 200) {
+				final data = json.decode(response.body);
+				return Vendor.fromJson(data);
+			} else {
+				return null;
+			}
+		} catch (e, stackTrace) {
+			print('Exception in getVendorByEmail: $e');
+			print('StackTrace: $stackTrace');
+			return null;
+		}
+	}
+
+	// ✅ الدالة: تسجيل دخول البائع
+	static Future<Vendor?> loginVendor(String email, String password) async {
+		try {
+			final response = await http.post(
+				Uri.parse(ApiHelper.url('api_allvendors.php')),
+				body: {'email': email, 'password': password},
+			);
+			print('loginVendor: ${response.body}');
+			if (response.statusCode == 200) {
+				final data = json.decode(response.body);
+				return Vendor.fromJson(data);
+			} else {
+				return null;
+			}
+		} catch (e, stackTrace) {
+			print('Exception in loginVendor: $e');
+			print('StackTrace: $stackTrace');
+			return null;
+		}
+	}
+	static Future<List<dynamic>> fetchStoresByVendorId(String vendorId) async {
+		final url = Uri.parse(ApiHelper.url('stores')).replace(queryParameters: {
+			'vendor_id': vendorId,
+		});
+
+		final response = await http.get(url);
+
+		if (response.statusCode == 200) {
+			final data = json.decode(response.body);
+			return data['stores']; // حسب شكل الرد من API
+		} else {
+			throw Exception('Failed to load stores');
+		}
+	}
 }

@@ -3,15 +3,21 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:untitled2/viw/AllProductsPage.dart';
 import 'package:untitled2/viw/EditProfilePage.dart';
-import 'package:untitled2/viw/cart_screen.dart'; // تأكد من المسار الصحيح
+import 'package:untitled2/viw/MostOrderedProductsPage.dart';
+// تأكد من المسار الصحيح
 import 'package:untitled2/viw/categories_screen.dart'; // تأكد من المسار الصحيح
+import 'package:untitled2/viw/f/InvoicePage.dart';
 import 'package:untitled2/viw/login.dart'; // تأكد من المسار الصحيح
 import 'package:untitled2/viw/products_screen.dart'; // تأكد من المسار الصحيح
 import 'package:untitled2/viw/stores_all.dart'; // تأكد من المسار الصحيح
+// تأكد من المسار الصحيح لصفحة نبذة عنا
 import '../model/user_model.dart'; // تأكد من المسار الصحيح لنموذج المستخدم
- // <-- استخدام صفحة التعديل المصححة
-import '../service/user_server.dart'; // <-- استيراد خدمة المستخدم لجلب البيانات
+import '../service/user_server.dart';
+import 'AboutUsPage.dart';
+import 'Support or Help.dart';
+import 'controll/AdminLoginPage.dart'; // <-- استيراد خدمة المستخدم لجلب البيانات
 
 // --- ألوان للتصميم الجذاب (يمكن تخصيصها) ---
 const Color primaryDrawerColor = Color(0xFF6D4C41);
@@ -51,8 +57,8 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 		_pages = [
 			CategoriesScreen(user: _currentUser),
 			SimpleStoreListPage(user: _currentUser),
-			AllProductsPageNew(),
-			CartPage(userId: _currentUser.id),
+			AllProductsPageNew(storeId: '', storeName: '',user: _currentUser),
+			MostOrderedProductsPage(),
 		];
 	}
 
@@ -93,11 +99,20 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 
 	void _updateTitle(int index) {
 		switch (index) {
-			case 0: _title = 'الأقسام'; break;
-			case 1: _title = 'المتاجر'; break;
-			case 2: _title = 'جميع المنتجات'; break;
-			case 3: _title = 'السلة'; break;
-			default: _title = 'متجرك';
+			case 0:
+				_title = 'الأقسام';
+				break;
+			case 1:
+				_title = 'المتاجر';
+				break;
+			case 2:
+				_title = 'جميع المنتجات';
+				break;
+			case 3:
+				_title = 'السلة';
+				break;
+			default:
+				_title = 'متجرك';
 		}
 	}
 
@@ -178,12 +193,12 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 						),
 						tooltip: 'السلة',
 						onPressed: () {
-							if (_pages.length > 3 && _pages[3] is CartPage) {
+							if (_pages.length > 3 && _pages[3] is MostOrderedProductsPage) {
 								_onSelectItem(3);
 							} else {
 								Navigator.push(
 									context,
-									MaterialPageRoute(builder: (context) => CartPage(userId: user.id)),
+									MaterialPageRoute(builder: (context) =>MostOrderedProductsPage()),
 								);
 							}
 						},
@@ -223,23 +238,94 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 									const SizedBox(height: 12),
 									Text(
 										user.name,
-										style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textDrawerColor, shadows: [Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))]),
+										style: TextStyle(
+											fontSize: 18,
+											fontWeight: FontWeight.bold,
+											color: textDrawerColor,
+											shadows: [Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))],
+										),
 									),
 									const SizedBox(height: 4),
 									Text(
 										user.email,
-										style: TextStyle(fontSize: 14, color: textDrawerColor.withOpacity(0.8), shadows: [Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))]),
+										style: TextStyle(
+											fontSize: 14,
+											color: textDrawerColor.withOpacity(0.8),
+											shadows: [Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))],
+										),
 									),
 								],
 							),
 						),
+
+						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
+						_buildNavigationItem(Icons.edit_outlined, 'تعديل الملف الشخصي', _navigateToEditProfile),
+						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
 						_buildDrawerItem(Icons.category_outlined, 'الأقسام', 0, _selectedIndex == 0),
 						_buildDrawerItem(Icons.store_mall_directory_outlined, 'المتاجر', 1, _selectedIndex == 1),
 						_buildDrawerItem(Icons.shopping_bag_outlined, 'جميع المنتجات', 2, _selectedIndex == 2),
 						_buildDrawerItem(Icons.shopping_cart_outlined, 'السلة', 3, _selectedIndex == 3),
 						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
-						_buildNavigationItem(Icons.edit_outlined, 'تعديل الملف الشخصي', _navigateToEditProfile),
-						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
+
+						ListTile(
+							leading: Icon(Icons.info_outline, color: iconDrawerColor, size: 24),
+							title: Text('الادارة', style: TextStyle(color: textDrawerColor, fontSize: 14)),
+							onTap: () {
+								Navigator.pop(context);
+								Navigator.push(
+									context,
+									MaterialPageRoute(builder: (context) => AdminLoginPage()),
+								);
+							},
+							dense: true,
+							contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+						),
+
+						ListTile(
+							leading: Icon(Icons.info_outline, color: iconDrawerColor, size: 24),
+							title: Text('ادارة المحل ', style: TextStyle(color: textDrawerColor, fontSize: 14)),
+							onTap: () {
+								Navigator.pop(context);
+								Navigator.push(
+									context,
+									MaterialPageRoute(builder: (context) => LoginPage()),
+								);
+							},
+							dense: true,
+							contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+						),
+
+						// إضافة عنصر "من نحن"
+						ListTile(
+							leading: Icon(Icons.info_outline, color: iconDrawerColor, size: 24),
+							title: Text('من نحن', style: TextStyle(color: textDrawerColor, fontSize: 14)),
+							onTap: () {
+								Navigator.pop(context);
+								Navigator.push(
+									context,
+									MaterialPageRoute(builder: (context) => AboutUsPage()),
+								);
+							},
+							dense: true,
+							contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+						),
+
+						// إضافة عنصر "نبذة عنا"
+						ListTile(
+							leading: Icon(Icons.support_agent_outlined, color: iconDrawerColor, size: 24),
+							title: Text('نبذة عنا', style: TextStyle(color: textDrawerColor, fontSize: 14)),
+							onTap: () {
+								Navigator.pop(context);
+								Navigator.push(
+									context,
+									MaterialPageRoute(builder: (context) => SupportPage()),
+								);
+							},
+							dense: true,
+							contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+						),
+
+
 						ListTile(
 							leading: Icon(Icons.logout, color: Colors.redAccent, size: 24),
 							title: Text('تسجيل الخروج', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
@@ -289,18 +375,7 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 }
 
 // --- صفحة المنتجات الجديدة الافتراضية (مثال) ---
-class AllProductsPageNew extends StatelessWidget {
-	@override
-	Widget build(BuildContext context) {
-		return Center(
-			child: Text(
-				'صفحة جميع المنتجات الجديدة',
-				style: Theme.of(context).textTheme.headlineMedium,
-			),
-		);
-	}
-}
+
 
 // --- قائمة السلة العامة (مثال) ---
 List<Map<String, dynamic>> cartItems = [];
-

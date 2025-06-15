@@ -4,13 +4,8 @@ import 'package:http/http.dart' as http;
 import '../ApiConfig.dart';
 import '../model/vendors_model.dart';
 
-
-
-
 class VendorService {
-	// تأكد من تعديل رابط API إذا لزم الأمر (مثلاً استخدام ملف API خاص بالبائعين "api_vendor.php")
-
-	//static var url = Uri.parse('http://190.30.24.218/ecommerce/api_allvendors.php');
+	// رابط API الأساسي
 	static final url = Uri.parse(ApiHelper.url('api_allvendors.php'));
 
 	static const _add = 'add';
@@ -18,6 +13,7 @@ class VendorService {
 	static const _update = 'update';
 	static const _delete = 'delete';
 
+	// جلب جميع البائعين
 	static Future<List<Vendor>> getAllVendors() async {
 		try {
 			var map = {'action': _fetch};
@@ -25,8 +21,7 @@ class VendorService {
 			print('getAllVendors: response code: ${response.statusCode}');
 			print('getAllVendors: response body: ${response.body}');
 			if (response.statusCode == 200) {
-				final parsed = json.decode(response.body)
-						.cast<Map<String, dynamic>>();
+				final parsed = json.decode(response.body).cast<Map<String, dynamic>>();
 				return parsed.map<Vendor>((json) => Vendor.fromJson(json)).toList();
 			} else {
 				return [];
@@ -38,6 +33,7 @@ class VendorService {
 		}
 	}
 
+	// إضافة بائع جديد
 	static Future<String> addVendor(Vendor vendor) async {
 		var map = vendor.toJson();
 		map['action'] = _add;
@@ -53,6 +49,7 @@ class VendorService {
 		}
 	}
 
+	// تحديث بيانات بائع
 	static Future<String> updateVendor(Vendor vendor) async {
 		var map = vendor.toJson();
 		map['action'] = _update;
@@ -68,6 +65,7 @@ class VendorService {
 		}
 	}
 
+	// حذف بائع
 	static Future<String> deleteVendor(String id) async {
 		var map = {
 			'action': _delete,
@@ -82,6 +80,80 @@ class VendorService {
 			print('Exception in deleteVendor: $e');
 			print('StackTrace: $stackTrace');
 			return 'error';
+		}
+	}
+
+	// جلب بائع عن طريق الايميل
+	static Future<Vendor?> getVendorByEmail(String email) async {
+		try {
+			final response = await http.post(
+				url,
+				body: {
+					'action': 'getVendorByEmail', // تأكد أن هذه الحالة موجودة في الـ API لديك
+					'email': email,
+				},
+			);
+			print('getVendorByEmail: ${response.body}');
+			if (response.statusCode == 200) {
+				final data = json.decode(response.body);
+				if (data is Map<String, dynamic> && data.containsKey('message')) {
+					print('Error from server: ${data['message']}');
+					return null;
+				}
+				return Vendor.fromJson(data);
+			} else {
+				print('getVendorByEmail: response status not 200');
+				return null;
+			}
+		} catch (e, stackTrace) {
+			print('Exception in getVendorByEmail: $e');
+			print('StackTrace: $stackTrace');
+			return null;
+		}
+	}
+
+	// تسجيل دخول البائع
+	static Future<Vendor?> loginVendor(String email, String password) async {
+		try {
+			final response = await http.post(
+				url,
+				body: {
+					'action': 'login', // تأكد من دعم هذه الحالة في الـ API
+					'email': email,
+					'password': password,
+				},
+			);
+			print('loginVendor: ${response.body}');
+			if (response.statusCode == 200) {
+				final data = json.decode(response.body);
+				if (data is Map<String, dynamic> && data.containsKey('message')) {
+					print('Error from server: ${data['message']}');
+					return null;
+				}
+				return Vendor.fromJson(data);
+			} else {
+				return null;
+			}
+		} catch (e, stackTrace) {
+			print('Exception in loginVendor: $e');
+			print('StackTrace: $stackTrace');
+			return null;
+		}
+	}
+
+	// جلب المتاجر الخاصة ببائع معين
+	static Future<List<dynamic>> fetchStoresByVendorId(String vendorId) async {
+		final urlStores = Uri.parse(ApiHelper.url('stores')).replace(queryParameters: {
+			'vendor_id': vendorId,
+		});
+
+		final response = await http.get(urlStores);
+
+		if (response.statusCode == 200) {
+			final data = json.decode(response.body);
+			return data['stores']; // حسب شكل الرد من API
+		} else {
+			throw Exception('Failed to load stores');
 		}
 	}
 }

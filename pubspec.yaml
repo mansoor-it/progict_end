@@ -85,6 +85,9 @@ flutter:
     - assets/store_banner.jpg
     - assets/fonts/Cairo/Cairo-Regular.ttf
     - assets/fonts/Cairo/Cairo-Bold.ttf
+    - assets/icons/facebook-2.svg
+    - assets/icons/twitter.svg
+    - assets/icons/google-icon.svg
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

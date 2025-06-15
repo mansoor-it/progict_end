@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 class Store {
 	final String id;
-	final String userId;
+	final String vendor_id ;
 	final String categoryId;
 	final String name;
 	final String description;
@@ -15,7 +15,7 @@ class Store {
 
 	Store({
 		required this.id,
-		required this.userId,
+		required this.vendor_id ,
 		required this.categoryId,
 		required this.name,
 		required this.description,
@@ -30,7 +30,7 @@ class Store {
 	/// منشئ تلقائي مع تاريخ الإنشاء والتعديل
 	factory Store.create({
 		required String id,
-		required String userId,
+		required String vendor_id ,
 		required String categoryId,
 		required String name,
 		required String description,
@@ -42,7 +42,7 @@ class Store {
 		String now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 		return Store(
 			id: id,
-			userId: userId,
+			vendor_id : vendor_id ,
 			categoryId: categoryId,
 			name: name,
 			description: description,
@@ -58,7 +58,7 @@ class Store {
 	/// تحديث القيم مع الحفاظ على createdAt وتحديث updatedAt
 	Store copyWith({
 		String? id,
-		String? userId,
+		String? vendor_id ,
 		String? categoryId,
 		String? name,
 		String? description,
@@ -70,7 +70,7 @@ class Store {
 		String now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 		return Store(
 			id: id ?? this.id,
-			userId: userId ?? this.userId,
+			vendor_id : vendor_id  ?? this.vendor_id ,
 			categoryId: categoryId ?? this.categoryId,
 			name: name ?? this.name,
 			description: description ?? this.description,
@@ -86,7 +86,7 @@ class Store {
 	factory Store.fromJson(Map<String, dynamic> json) {
 		return Store(
 			id: json['id'].toString(),
-			userId: json['user_id'].toString(),
+			vendor_id : json['vendor_id '].toString(),
 			categoryId: json['category_id'].toString(),
 			name: json['name'] ?? '',
 			description: json['description'] ?? '',
@@ -102,7 +102,7 @@ class Store {
 	Map<String, dynamic> toJson() {
 		return {
 			'id': id,
-			'user_id': userId,
+			'vendor_id ': vendor_id ,
 			'category_id': categoryId,
 			'name': name,
 			'description': description,

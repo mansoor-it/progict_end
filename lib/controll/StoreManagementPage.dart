@@ -3,13 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-
 import '../ApiConfig.dart';
 
-// تعريف كلاس المحل بناءً على الحقول المطلوبة
 class Store {
 	final String id;
-	final String userId;
+	final String vendor_id;
 	final String categoryId;
 	final String name;
 	final String description;
@@ -21,7 +19,7 @@ class Store {
 
 	Store({
 		required this.id,
-		required this.userId,
+		required this.vendor_id,
 		required this.categoryId,
 		required this.name,
 		required this.description,
@@ -35,7 +33,7 @@ class Store {
 	factory Store.fromJson(Map<String, dynamic> json) {
 		return Store(
 			id: json['id']?.toString() ?? '',
-			userId: json['user_id']?.toString() ?? '',
+			vendor_id: json['vendor_id']?.toString() ?? '',
 			categoryId: json['category_id']?.toString() ?? '',
 			name: json['name'] ?? '',
 			description: json['description'] ?? '',
@@ -44,7 +42,7 @@ class Store {
 					? json['store_image'] as String
 					: null,
 			rating: json['rating']?.toString() ?? '0',
-			isActive: json['is_active']?.toString() ?? '0',
+			isActive: json['is_active']?.toString() ?? 'inactive',
 			createdAt: json['created_at'] ?? '',
 		);
 	}
@@ -56,16 +54,13 @@ class StoreManagementPage extends StatefulWidget {
 }
 
 class _StoreManagementPageState extends State<StoreManagementPage> {
-
-	//final String apiUrl = 'http://190.30.24.218/ecommerce/stores.php';
 	final String apiUrl = ApiHelper.url('stores.php');
-
 	final ImagePicker _picker = ImagePicker();
 
 	List<Store> _stores = [];
 	bool _isLoading = false;
 
-	final TextEditingController _userIdController = TextEditingController();
+	final TextEditingController _vendorIdController = TextEditingController();
 	final TextEditingController _categoryController = TextEditingController();
 	final TextEditingController _nameController = TextEditingController();
 	final TextEditingController _descriptionController = TextEditingController();
@@ -108,11 +103,12 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 	Future<void> _submitStore({String? id}) async {
 		FocusScope.of(context).unfocus();
 		setState(() => _isLoading = true);
+
 		final action = id == null ? 'add' : 'update';
 		final body = {
 			'action': action,
 			if (id != null) 'id': id,
-			'user_id': _userIdController.text.trim(),
+			'vendor_id': _vendorIdController.text.trim(),
 			'category_id': _categoryController.text.trim(),
 			'name': _nameController.text.trim(),
 			'description': _descriptionController.text.trim(),
@@ -121,21 +117,37 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 			'rating': _ratingController.text.trim(),
 			'is_active': _isActiveController.text.trim(),
 		};
+
 		try {
+			print('📤 Sending POST to $apiUrl with body:');
+			body.forEach((key, value) {
+				print('  $key: ${value.toString().substring(0, value.toString().length > 100 ? 100 : value.toString().length)}');
+			});
+
 			final resp = await http.post(Uri.parse(apiUrl), body: body);
+			print('📥 Status Code: ${resp.statusCode}');
+			print('📥 Response Body: ${resp.body}');
+
 			final respBody = json.decode(resp.body);
 			final msg = respBody['message'] ?? '';
 			final success = msg.toLowerCase().contains('success');
+
 			ScaffoldMessenger.of(context).showSnackBar(
 				SnackBar(content: Text(msg), backgroundColor: success ? Colors.green : Colors.red),
 			);
 			if (success) _fetchStores();
-		} catch (e) {
-			ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ $e'), backgroundColor: Colors.red));
+		} catch (e, stack) {
+			print('❌ Exception occurred: $e');
+			print('🔍 Stack trace:\n$stack');
+
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text('❌ $e'), backgroundColor: Colors.red),
+			);
 		} finally {
 			setState(() => _isLoading = false);
 		}
 	}
+
 
 	Future<void> _deleteStore(String id) async {
 		setState(() => _isLoading = true);
@@ -162,7 +174,7 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 				WidgetsBinding.instance.addPostFrameCallback((_) {
 					if (!mounted) return;
 					if (store != null) {
-						_userIdController.text = store.userId;
+						_vendorIdController.text = store.vendor_id;
 						_categoryController.text = store.categoryId;
 						_nameController.text = store.name;
 						_descriptionController.text = store.description;
@@ -171,7 +183,7 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 						_isActiveController.text = store.isActive;
 						_pickedImageBase64 = store.imageBase64;
 					} else {
-						_userIdController.clear();
+						_vendorIdController.clear();
 						_categoryController.clear();
 						_nameController.clear();
 						_descriptionController.clear();
@@ -181,13 +193,14 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 						_pickedImageBase64 = null;
 					}
 				});
+
 				return AlertDialog(
 					title: Text(store == null ? 'Add Store' : 'Edit Store'),
 					content: SingleChildScrollView(
 						child: Column(
 							mainAxisSize: MainAxisSize.min,
 							children: [
-								TextField(controller: _userIdController, decoration: InputDecoration(labelText: 'User ID')),
+								TextField(controller: _vendorIdController, decoration: InputDecoration(labelText: 'Vendor ID')),
 								TextField(controller: _categoryController, decoration: InputDecoration(labelText: 'Category ID')),
 								TextField(controller: _nameController, decoration: InputDecoration(labelText: 'Name')),
 								TextField(controller: _descriptionController, decoration: InputDecoration(labelText: 'Description')),
@@ -195,15 +208,24 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 								const SizedBox(height: 8),
 								ElevatedButton(onPressed: _pickImage, child: Text('Select Image')),
 								if (_pickedImageBase64 != null)
-									Padding(padding: const EdgeInsets.only(top: 8), child: Image.memory(base64Decode(_pickedImageBase64!), width:100, height:100)),
+									Padding(
+										padding: const EdgeInsets.only(top: 8),
+										child: Image.memory(base64Decode(_pickedImageBase64!), width: 100, height: 100),
+									),
 								TextField(controller: _ratingController, decoration: InputDecoration(labelText: 'Rating')),
 								TextField(controller: _isActiveController, decoration: InputDecoration(labelText: 'Is Active')),
 							],
 						),
 					),
 					actions: [
-						TextButton(onPressed: () { FocusScope.of(ctx).unfocus(); Navigator.pop(ctx); }, child: Text('Cancel')),
-						TextButton(onPressed: () { FocusScope.of(ctx).unfocus(); _submitStore(id: store?.id); Navigator.pop(ctx); }, child: Text(store == null ? 'Add' : 'Update')),
+						TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+						TextButton(
+							onPressed: () {
+								_submitStore(id: store?.id);
+								Navigator.pop(ctx);
+							},
+							child: Text(store == null ? 'Add' : 'Update'),
+						),
 					],
 				);
 			},
@@ -212,7 +234,7 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 
 	@override
 	void dispose() {
-		_userIdController.dispose();
+		_vendorIdController.dispose();
 		_categoryController.dispose();
 		_nameController.dispose();
 		_descriptionController.dispose();
@@ -236,7 +258,7 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 				child: DataTable(
 					columns: [
 						DataColumn(label: Text('id')),
-						DataColumn(label: Text('user_id')),
+						DataColumn(label: Text('vendor_id')),
 						DataColumn(label: Text('category_id')),
 						DataColumn(label: Text('name')),
 						DataColumn(label: Text('description')),
@@ -251,21 +273,25 @@ class _StoreManagementPageState extends State<StoreManagementPage> {
 					],
 					rows: _stores.map((s) {
 						Uint8List? img;
-						if (s.imageBase64 != null) { try { img = base64Decode(s.imageBase64!); } catch(_){} }
+						if (s.imageBase64 != null) {
+							try {
+								img = base64Decode(s.imageBase64!);
+							} catch (_) {}
+						}
 						return DataRow(cells: [
 							DataCell(Text(s.id)),
-							DataCell(Text(s.userId)),
+							DataCell(Text(s.vendor_id)),
 							DataCell(Text(s.categoryId)),
 							DataCell(Text(s.name)),
 							DataCell(Text(s.description)),
 							DataCell(Text(s.address)),
-							DataCell(img!=null ? Image.memory(img,width:50,height:50) : Icon(Icons.store)),
+							DataCell(img != null ? Image.memory(img, width: 50, height: 50) : Icon(Icons.store)),
 							DataCell(Text(s.rating)),
 							DataCell(Text(s.isActive)),
 							DataCell(Text(s.createdAt)),
-							DataCell(IconButton(icon: Icon(Icons.edit), onPressed: ()=>_showDialog(store: s))),
-							DataCell(IconButton(icon: Icon(Icons.copy), onPressed: ()=>_showDialog(store: s))),
-							DataCell(IconButton(icon: Icon(Icons.delete, color:Colors.red), onPressed: ()=>_deleteStore(s.id))),
+							DataCell(IconButton(icon: Icon(Icons.edit), onPressed: () => _showDialog(store: s))),
+							DataCell(IconButton(icon: Icon(Icons.copy), onPressed: () => _showDialog(store: s))),
+							DataCell(IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteStore(s.id))),
 						]);
 					}).toList(),
 				),

@@ -18,6 +18,11 @@ class Vendor {
 	final String? createdAt;
 	final String? updatedAt;
 
+	// ✅ الخصائص الجديدة المطلوبة
+	final String? accessToken;
+	final String? emailVerifiedAt;
+	final String? rememberToken;
+
 	Vendor({
 		required this.id,
 		required this.name,
@@ -35,6 +40,9 @@ class Vendor {
 		required this.status,
 		this.createdAt,
 		this.updatedAt,
+		this.accessToken,
+		this.emailVerifiedAt,
+		this.rememberToken,
 	});
 
 	factory Vendor.create({
@@ -89,6 +97,9 @@ class Vendor {
 		String? confirm,
 		double? commission,
 		String? status,
+		String? accessToken,
+		String? emailVerifiedAt,
+		String? rememberToken,
 	}) {
 		String now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 		return Vendor(
@@ -108,6 +119,9 @@ class Vendor {
 			status: status ?? this.status,
 			createdAt: this.createdAt,
 			updatedAt: now,
+			accessToken: accessToken ?? this.accessToken,
+			emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
+			rememberToken: rememberToken ?? this.rememberToken,
 		);
 	}
 
@@ -134,6 +148,9 @@ class Vendor {
 			status: json['status'].toString(),
 			createdAt: json['created_at'],
 			updatedAt: json['updated_at'],
+			accessToken: json['access_token'],
+			emailVerifiedAt: json['email_verified_at'],
+			rememberToken: json['remember_token'],
 		);
 	}
 
@@ -151,14 +168,17 @@ class Vendor {
 			'password': password,
 			'image': image ?? "",
 			'confirm': confirm,
-			'commission': commission.toString(), // Ensure this is a string
+			'commission': commission.toString(),
 			'status': status,
 			'created_at': createdAt ?? "",
 			'updated_at': updatedAt ?? "",
+			'access_token': accessToken ?? "",
+			'email_verified_at': emailVerifiedAt ?? "",
+			'remember_token': rememberToken ?? "",
 		};
 	}
 
-	/// تستخدم هذه الدالة عند الإرسال إلى API (http.post) حيث يجب أن تكون القيم كلها من نوع String
+	/// تستخدم هذه الدالة عند الإرسال إلى API (http.post)
 	Map<String, String> toJsonForRequest() {
 		return {
 			'id': id,
@@ -173,10 +193,13 @@ class Vendor {
 			'password': password,
 			'image': image ?? "",
 			'confirm': confirm,
-			'commission': commission.toString(), // ✅ تصحيح مهم
+			'commission': commission.toString(),
 			'status': status,
 			'created_at': createdAt ?? "",
 			'updated_at': updatedAt ?? "",
+			'access_token': accessToken ?? "",
+			'email_verified_at': emailVerifiedAt ?? "",
+			'remember_token': rememberToken ?? "",
 		};
 	}
 }

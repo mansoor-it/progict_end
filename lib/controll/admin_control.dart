@@ -22,7 +22,24 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
   String searchQuery = '';
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   late AnimationController _loadingController;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
   int _currentFooterIndex = 1; // مؤشر للعنصر النشط في الفوتر
+
+  // Controllers للفلترة والبحث
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _vendorIdFilterController = TextEditingController();
+  final TextEditingController _typeFilterController = TextEditingController();
+  String _selectedStatusFilter = 'الكل';
+  String _selectedConfirmFilter = 'الكل';
+  String _selectedImageFilter = 'الكل';
+  String _sortBy = 'id';
+  bool _sortAscending = true;
+
+  // إحصائيات
+  DashboardStats? _stats;
 
   @override
   void initState() {
@@ -31,12 +48,42 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+
+    _fadeController = AnimationController(
+      duration: Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+
+    _fadeController.forward();
+    _slideController.forward();
+
     _fetchAdmins();
+    _searchController.addListener(_applyFilter);
+    _vendorIdFilterController.addListener(_applyFilter);
+    _typeFilterController.addListener(_applyFilter);
   }
 
   @override
   void dispose() {
     _loadingController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    _searchController.dispose();
+    _vendorIdFilterController.dispose();
+    _typeFilterController.dispose();
     super.dispose();
   }
 
@@ -48,6 +95,7 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
       List<Admin> admins = await AdminService.getAllAdmins();
       setState(() {
         _admins = admins;
+        _stats = _calculateStats();
         _applyFilter();
       });
     } catch (e, stackTrace) {
@@ -70,14 +118,142 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
     }
   }
 
+  DashboardStats _calculateStats() {
+    if (_admins.isEmpty) {
+      return DashboardStats(
+        totalAdmins: 0,
+        activeAdmins: 0,
+        inactiveAdmins: 0,
+        confirmedAdmins: 0,
+        unconfirmedAdmins: 0,
+        uniqueVendors: 0,
+        adminsWithImages: 0,
+        adminsWithoutImages: 0,
+        mostCommonType: 'غير متوفر',
+        mostCommonStatus: 'غير متوفر',
+        totalTypes: 0,
+        confirmationRate: 0.0,
+        activationRate: 0.0,
+      );
+    }
+
+    int activeAdmins = _admins.where((admin) => admin.status == '1').length;
+    int inactiveAdmins = _admins.where((admin) => admin.status == '0').length;
+    int confirmedAdmins = _admins.where((admin) => admin.confirm.toLowerCase() == 'yes').length;
+    int unconfirmedAdmins = _admins.where((admin) => admin.confirm.toLowerCase() == 'no').length;
+    Set<String> uniqueVendors = _admins.map((admin) => admin.vendorId).where((id) => id.isNotEmpty).toSet();
+    int adminsWithImages = _admins.where((admin) => admin.image.isNotEmpty).length;
+    int adminsWithoutImages = _admins.where((admin) => admin.image.isEmpty).length;
+
+    // حساب النوع الأكثر شيوعاً
+    Map<String, int> typeCount = {};
+    for (var admin in _admins) {
+      if (admin.type.isNotEmpty) {
+        typeCount[admin.type] = (typeCount[admin.type] ?? 0) + 1;
+      }
+    }
+    String mostCommonType = typeCount.entries.isNotEmpty
+        ? typeCount.entries.reduce((a, b) => a.value > b.value ? a : b).key
+        : 'غير متوفر';
+
+    // حساب الحالة الأكثر شيوعاً
+    Map<String, int> statusCount = {};
+    for (var admin in _admins) {
+      String statusText = admin.status == '1' ? 'نشط' : 'غير نشط';
+      statusCount[statusText] = (statusCount[statusText] ?? 0) + 1;
+    }
+    String mostCommonStatus = statusCount.entries.isNotEmpty
+        ? statusCount.entries.reduce((a, b) => a.value > b.value ? a : b).key
+        : 'غير متوفر';
+
+    Set<String> uniqueTypes = _admins.map((admin) => admin.type).where((type) => type.isNotEmpty).toSet();
+    double confirmationRate = _admins.isNotEmpty ? (confirmedAdmins / _admins.length) * 100 : 0.0;
+    double activationRate = _admins.isNotEmpty ? (activeAdmins / _admins.length) * 100 : 0.0;
+
+    return DashboardStats(
+      totalAdmins: _admins.length,
+      activeAdmins: activeAdmins,
+      inactiveAdmins: inactiveAdmins,
+      confirmedAdmins: confirmedAdmins,
+      unconfirmedAdmins: unconfirmedAdmins,
+      uniqueVendors: uniqueVendors.length,
+      adminsWithImages: adminsWithImages,
+      adminsWithoutImages: adminsWithoutImages,
+      mostCommonType: mostCommonType,
+      mostCommonStatus: mostCommonStatus,
+      totalTypes: uniqueTypes.length,
+      confirmationRate: confirmationRate,
+      activationRate: activationRate,
+    );
+  }
+
   void _applyFilter() {
     setState(() {
-      if (searchQuery.isEmpty) {
-        _filteredAdmins = List.from(_admins);
-      } else {
-        _filteredAdmins = _admins.where((admin) =>
-            admin.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+      _filteredAdmins = _admins.where((admin) {
+        bool matchesSearch = _searchController.text.isEmpty ||
+            admin.name.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+            admin.email.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+            admin.mobile.contains(_searchController.text) ||
+            admin.type.toLowerCase().contains(_searchController.text.toLowerCase());
+
+        bool matchesVendorId = _vendorIdFilterController.text.isEmpty ||
+            admin.vendorId.contains(_vendorIdFilterController.text);
+
+        bool matchesType = _typeFilterController.text.isEmpty ||
+            admin.type.toLowerCase().contains(_typeFilterController.text.toLowerCase());
+
+        bool matchesStatus = _selectedStatusFilter == 'الكل' ||
+            (_selectedStatusFilter == 'نشط' && admin.status == '1') ||
+            (_selectedStatusFilter == 'غير نشط' && admin.status == '0');
+
+        bool matchesConfirm = _selectedConfirmFilter == 'الكل' ||
+            (_selectedConfirmFilter == 'مؤكد' && admin.confirm.toLowerCase() == 'yes') ||
+            (_selectedConfirmFilter == 'غير مؤكد' && admin.confirm.toLowerCase() == 'no');
+
+        bool matchesImage = _selectedImageFilter == 'الكل' ||
+            (_selectedImageFilter == 'مع صورة' && admin.image.isNotEmpty) ||
+            (_selectedImageFilter == 'بدون صورة' && admin.image.isEmpty);
+
+        return matchesSearch && matchesVendorId && matchesType && matchesStatus && matchesConfirm && matchesImage;
+      }).toList();
+
+      _sortAdmins();
+    });
+  }
+
+  void _sortAdmins() {
+    _filteredAdmins.sort((a, b) {
+      int comparison = 0;
+      switch (_sortBy) {
+        case 'id':
+          comparison = int.parse(a.id).compareTo(int.parse(b.id));
+          break;
+        case 'name':
+          comparison = a.name.compareTo(b.name);
+          break;
+        case 'type':
+          comparison = a.type.compareTo(b.type);
+          break;
+        case 'vendorId':
+          comparison = int.parse(a.vendorId.isEmpty ? '0' : a.vendorId).compareTo(int.parse(b.vendorId.isEmpty ? '0' : b.vendorId));
+          break;
+        case 'email':
+          comparison = a.email.compareTo(b.email);
+          break;
+        case 'mobile':
+          comparison = a.mobile.compareTo(b.mobile);
+          break;
+        case 'status':
+          comparison = a.status.compareTo(b.status);
+          break;
+        case 'confirm':
+          comparison = a.confirm.compareTo(b.confirm);
+          break;
+        case 'createdAt':
+          comparison = (a.createdAt ?? '').compareTo(b.createdAt ?? '');
+          break;
       }
+      return _sortAscending ? comparison : -comparison;
     });
   }
 
@@ -142,9 +318,18 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
     TextEditingController(text: admin?.email ?? '');
     TextEditingController passwordController =
     TextEditingController(text: admin?.password ?? '');
+
+    // إصلاح مشكلة DropdownButtonFormField - التأكد من أن القيم تتطابق مع الخيارات المتاحة
     String confirmValue = admin?.confirm ?? 'No';
-    TextEditingController statusController =
-    TextEditingController(text: admin?.status ?? '0');
+    if (confirmValue != 'Yes' && confirmValue != 'No') {
+      confirmValue = 'No'; // قيمة افتراضية آمنة
+    }
+
+    String statusValue = admin?.status ?? '0';
+    if (statusValue != '1' && statusValue != '0') {
+      statusValue = '0'; // قيمة افتراضية آمنة
+    }
+
     String imageBase64 = admin?.image ?? '';
 
     showDialog(
@@ -330,8 +515,8 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
                             DropdownButtonFormField<String>(
                               value: confirmValue,
                               items: const [
-                                DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                                DropdownMenuItem(value: 'No', child: Text('No')),
+                                DropdownMenuItem(value: 'Yes', child: Text('مؤكد')),
+                                DropdownMenuItem(value: 'No', child: Text('غير مؤكد')),
                               ],
                               onChanged: (value) => setStateDialog(() {
                                 confirmValue = value ?? 'No';
@@ -346,17 +531,23 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
                               ),
                             ),
                             const SizedBox(height: 10),
-                            TextField(
-                              controller: statusController,
+                            DropdownButtonFormField<String>(
+                              value: statusValue,
+                              items: const [
+                                DropdownMenuItem(value: '1', child: Text('نشط')),
+                                DropdownMenuItem(value: '0', child: Text('غير نشط')),
+                              ],
+                              onChanged: (value) => setStateDialog(() {
+                                statusValue = value ?? '0';
+                              }),
                               decoration: const InputDecoration(
-                                labelText: 'الحالة (0/1)',
+                                labelText: 'الحالة',
                                 labelStyle: TextStyle(color: Colors.brown),
                                 border: OutlineInputBorder(),
                                 focusedBorder: OutlineInputBorder(
                                   borderSide: BorderSide(color: Colors.brown),
                                 ),
                               ),
-                              keyboardType: TextInputType.number,
                             ),
                           ],
                         ),
@@ -369,88 +560,77 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
                             Expanded(
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(color: Color(0xFF5D4037)),
-                                  padding: const EdgeInsets.symmetric(vertical: 15),
+                                  side: const BorderSide(color: Colors.grey),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('إلغاء',
-                                    style: TextStyle(color: Color(0xFF5D4037))),
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text(
+                                  'إلغاء',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 15),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF5D4037),
-                                  padding: const EdgeInsets.symmetric(vertical: 15),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
                                 onPressed: () async {
-                                  Navigator.pop(context);
-                                  Admin newAdmin = Admin(
-                                    id: admin?.id ?? '0',
-                                    name: nameController.text,
-                                    type: typeController.text,
-                                    vendorId: vendorIdController.text,
-                                    mobile: mobileController.text,
-                                    email: emailController.text,
-                                    password: passwordController.text,
-                                    image: imageBase64,
-                                    confirm: confirmValue,
-                                    status: statusController.text,
-                                    emailVerifiedAt: admin?.emailVerifiedAt,
-                                    rememberToken: admin?.rememberToken,
-                                    accessToken: admin?.accessToken,
-                                    createdAt: admin?.createdAt,
-                                    updatedAt: admin?.updatedAt,
-                                  );
-                                  setState(() {
-                                    _isLoading = true;
-                                  });
                                   try {
-                                    String result = admin == null
-                                        ? await AdminService.addAdmin(newAdmin)
-                                        : await AdminService.updateAdmin(newAdmin);
-                                    if (result.toLowerCase().contains("success")) {
-                                      await _fetchAdmins();
+                                    Admin newAdmin = Admin(
+                                      id: admin?.id ?? '',
+                                      name: nameController.text,
+                                      type: typeController.text,
+                                      vendorId: vendorIdController.text,
+                                      mobile: mobileController.text,
+                                      email: emailController.text,
+                                      password: passwordController.text,
+                                      confirm: confirmValue,
+                                      status: statusValue,
+                                      image: imageBase64,
+                                      createdAt: admin?.createdAt,
+                                      updatedAt: admin?.updatedAt,
+                                    );
+
+                                    if (admin == null) {
+                                      await AdminService.addAdmin(newAdmin);
                                       ScaffoldMessenger.of(parentContext).showSnackBar(
-                                        SnackBar(
+                                        const SnackBar(
                                           backgroundColor: Colors.green,
-                                          content: Text(admin == null
-                                              ? 'تم إضافة المدير'
-                                              : 'تم تحديث بيانات المدير'),
+                                          content: Text('تم إضافة المدير بنجاح'),
                                         ),
                                       );
                                     } else {
-                                      print('Error saving admin, result: $result');
+                                      await AdminService.updateAdmin(newAdmin);
                                       ScaffoldMessenger.of(parentContext).showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.red,
-                                          content: Text('خطأ: $result'),
+                                        const SnackBar(
+                                          backgroundColor: Colors.green,
+                                          content: Text('تم تحديث المدير بنجاح'),
                                         ),
                                       );
                                     }
-                                  } catch (e, stackTrace) {
-                                    print('Exception while saving admin: $e');
-                                    print('StackTrace: $stackTrace');
+
+                                    Navigator.of(context).pop();
+                                    _fetchAdmins();
+                                  } catch (e) {
                                     ScaffoldMessenger.of(parentContext).showSnackBar(
                                       SnackBar(
                                         backgroundColor: Colors.red,
-                                        content: Text('حدث خطأ أثناء الحفظ: $e'),
+                                        content: Text('خطأ: $e'),
                                       ),
                                     );
                                   }
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
                                 },
-                                child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+                                child: Text(
+                                  admin == null ? 'إضافة' : 'تحديث',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
                               ),
                             ),
                           ],
@@ -467,259 +647,489 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
     );
   }
 
-  Future<void> _deleteAdmin(String id) async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      String result = await AdminService.deleteAdmin(id);
-      if (result.toLowerCase().contains("success")) {
-        await _fetchAdmins();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Text('تم حذف المدير'),
+  void _deleteAdmin(Admin admin) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: Text('هل أنت متأكد من حذف المدير "${admin.name}"؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text('خطأ: $result'),
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      print('Error deleting admin: $e');
-      print('StackTrace: $stackTrace');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red,
-          content: Text('حدث خطأ أثناء الحذف: $e'),
-        ),
-      );
-    }
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  // بناء فوتر مشابه للصورة المطلوبة
-  Widget _buildFooter() {
-    return Container(
-      height: 60,
-      decoration: BoxDecoration(
-        color: const Color(0xFFD7CCC8),
-        border: Border(top: BorderSide(color: Colors.brown.shade300, width: 1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.brown.withOpacity(0.2),
-            blurRadius: 8,
-            spreadRadius: 2,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildFooterItem('السنة', Icons.calendar_today, index: 0),
-          _buildFooterItem('المفصلة حسابي', Icons.account_balance_wallet, index: 1),
-          _buildFooterItem('الرئيسية المنتجات', Icons.home, index: 2),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFooterItem(String title, IconData icon, {required int index}) {
-    bool isActive = _currentFooterIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentFooterIndex = index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? const Color(0xFF5D4037) : Colors.brown.shade600,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              color: isActive ? const Color(0xFF5D4037) : Colors.brown.shade600,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              fontSize: 12,
-            ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              try {
+                await AdminService.deleteAdmin(admin.id);
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: Colors.green,
+                    content: Text('تم حذف المدير بنجاح'),
+                  ),
+                );
+                _fetchAdmins();
+              } catch (e) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: Colors.red,
+                    content: Text('خطأ في الحذف: $e'),
+                  ),
+                );
+              }
+            },
+            child: const Text('حذف', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Theme(
-      data: ThemeData(
-        primarySwatch: const MaterialColor(0xFF5D4037, {
-          50: Color(0xFFEFEBE9),
-          100: Color(0xFFD7CCC8),
-          200: Color(0xFFBCAAA4),
-          300: Color(0xFFA1887F),
-          400: Color(0xFF8D6E63),
-          500: Color(0xFF795548),
-          600: Color(0xFF6D4C41),
-          700: Color(0xFF5D4037),
-          800: Color(0xFF4E342E),
-          900: Color(0xFF3E2723),
-        }),
-        colorScheme: ColorScheme.fromSwatch(
-          primarySwatch: const MaterialColor(0xFF5D4037, {
-            50: Color(0xFFEFEBE9),
-            100: Color(0xFFD7CCC8),
-            200: Color(0xFFBCAAA4),
-            300: Color(0xFFA1887F),
-            400: Color(0xFF8D6E63),
-            500: Color(0xFF795548),
-            600: Color(0xFF6D4C41),
-            700: Color(0xFF5D4037),
-            800: Color(0xFF4E342E),
-            900: Color(0xFF3E2723),
-          }),
-        ).copyWith(secondary: const Color(0xFFD7CCC8)),
-        fontFamily: 'Tajawal',
-      ),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("إدارة الإداريين",
-              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Tajawal')),
-          centerTitle: true,
-          elevation: 8,
-          backgroundColor: const Color(0xFF5D4037),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-          ),
-          actions: [
-            if (_isLoading)
-              Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 3,
-                ),
-              )
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: const Color(0xFF5D4037),
-          onPressed: _showAdminDialog,
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(50),
-            side: const BorderSide(color: Colors.white, width: 2),
-          ),
-          child: const Icon(Icons.add, color: Colors.white, size: 30),
-        ),
-        body: Container(
-          decoration: const BoxDecoration(
+  Widget _buildDashboard() {
+    if (_stats == null) return SizedBox.shrink();
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Container(
+          margin: EdgeInsets.all(16),
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFEFEBE9), Colors.white],
+              colors: [Colors.brown.shade50, Colors.brown.shade100],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.brown.shade200.withOpacity(0.5),
+                blurRadius: 15,
+                offset: Offset(0, 5),
+              ),
+            ],
           ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                child: Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(30),
-                  child: TextField(
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                        _applyFilter();
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'ابحث بالاسم ...',
-                      hintStyle: const TextStyle(fontFamily: 'Tajawal'),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF5D4037)),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 5, horizontal: 20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: const BorderSide(color: Color(0xFF5D4037), width: 1.5),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.dashboard, color: Colors.brown.shade700, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      "لوحة الإحصائيات",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.brown.shade800,
                       ),
                     ),
+                  ],
+                ),
+                SizedBox(height: 20),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.5,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  children: [
+                    _buildStatCard("إجمالي المديرين", _stats!.totalAdmins.toString(), Icons.people, Colors.green),
+                    _buildStatCard("مديرين نشطين", _stats!.activeAdmins.toString(), Icons.person_add, Colors.blue),
+                    _buildStatCard("مديرين غير نشطين", _stats!.inactiveAdmins.toString(), Icons.person_off, Colors.orange),
+                    _buildStatCard("حسابات مؤكدة", _stats!.confirmedAdmins.toString(), Icons.verified, Colors.purple),
+                    _buildStatCard("حسابات غير مؤكدة", _stats!.unconfirmedAdmins.toString(), Icons.pending, Colors.red),
+                    _buildStatCard("بائعين فريدين", _stats!.uniqueVendors.toString(), Icons.store, Colors.teal),
+                    _buildStatCard("مع صور", _stats!.adminsWithImages.toString(), Icons.image, Colors.amber),
+                    _buildStatCard("بدون صور", _stats!.adminsWithoutImages.toString(), Icons.image_not_supported, Colors.cyan),
+                    _buildStatCard("النوع الأكثر شيوعاً", _stats!.mostCommonType, Icons.category, Colors.indigo),
+                    _buildStatCard("الحالة الأكثر شيوعاً", _stats!.mostCommonStatus, Icons.trending_up, Colors.pink),
+                    _buildStatCard("أنواع مختلفة", _stats!.totalTypes.toString(), Icons.diversity_3, Colors.brown),
+                    _buildStatCard("معدل التأكيد", "${_stats!.confirmationRate.toStringAsFixed(1)}%", Icons.check_circle, Colors.green),
+                    _buildStatCard("معدل التفعيل", "${_stats!.activationRate.toStringAsFixed(1)}%", Icons.toggle_on, Colors.blue),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 26),
+          SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 2),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterSection() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.filter_list, color: Colors.brown.shade600),
+              SizedBox(width: 8),
+              Text(
+                "البحث والفلترة",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.brown.shade800,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: "البحث في المديرين...",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
                   ),
                 ),
               ),
+              SizedBox(width: 12),
               Expanded(
-                child: _isLoading && _admins.isEmpty
-                    ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircularProgressIndicator(color: Color(0xFF5D4037)),
-                      const SizedBox(height: 20),
-                      TweenAnimationBuilder(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: const Duration(milliseconds: 500),
-                        builder: (context, value, child) {
-                          return Opacity(
-                            opacity: value,
-                            child: Transform.scale(
-                              scale: value,
-                              child: const Text('جاري تحميل البيانات...',
-                                  style: TextStyle(color: Color(0xFF5D4037), fontSize: 16, fontFamily: 'Tajawal')),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                child: TextField(
+                  controller: _vendorIdFilterController,
+                  decoration: InputDecoration(
+                    hintText: "فلترة بمعرف البائع...",
+                    prefixIcon: Icon(Icons.store),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
                   ),
-                )
-                    : _filteredAdmins.isEmpty
-                    ? Center(
-                  child: TweenAnimationBuilder(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 500),
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.scale(
-                          scale: value,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.group_off, size: 60, color: const Color(0xFF5D4037).withOpacity(0.7)),
-                              const SizedBox(height: 20),
-                              const Text('لا توجد بيانات للإداريين',
-                                  style: TextStyle(color: Color(0xFF5D4037), fontSize: 18, fontFamily: 'Tajawal')),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _typeFilterController,
+                  decoration: InputDecoration(
+                    hintText: "فلترة بالنوع...",
+                    prefixIcon: Icon(Icons.category),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
                   ),
-                )
-                    : ListView.builder(
-                  itemCount: _filteredAdmins.length,
-                  itemBuilder: (context, index) {
-                    final admin = _filteredAdmins[index];
-                    return _buildAdminCard(admin);
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedStatusFilter,
+                  decoration: InputDecoration(
+                    labelText: "فلترة بالحالة",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                  ),
+                  items: ['الكل', 'نشط', 'غير نشط']
+                      .map((status) => DropdownMenuItem(value: status, child: Text(status)))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedStatusFilter = value!;
+                      _applyFilter();
+                    });
                   },
                 ),
               ),
-              // إضافة الفوتر هنا
-              _buildFooter(),
+            ],
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedConfirmFilter,
+                  decoration: InputDecoration(
+                    labelText: "فلترة بالتأكيد",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                  ),
+                  items: ['الكل', 'مؤكد', 'غير مؤكد']
+                      .map((confirm) => DropdownMenuItem(value: confirm, child: Text(confirm)))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedConfirmFilter = value!;
+                      _applyFilter();
+                    });
+                  },
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedImageFilter,
+                  decoration: InputDecoration(
+                    labelText: "فلترة بالصورة",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                  ),
+                  items: ['الكل', 'مع صورة', 'بدون صورة']
+                      .map((image) => DropdownMenuItem(value: image, child: Text(image)))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedImageFilter = value!;
+                      _applyFilter();
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSortingSection() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.sort, color: Colors.grey.shade600),
+          SizedBox(width: 8),
+          Text("ترتيب حسب:", style: TextStyle(fontWeight: FontWeight.w500)),
+          SizedBox(width: 12),
+          Expanded(
+            child: DropdownButton<String>(
+              value: _sortBy,
+              isExpanded: true,
+              underline: SizedBox.shrink(),
+              items: [
+                DropdownMenuItem(value: 'id', child: Text('المعرف')),
+                DropdownMenuItem(value: 'name', child: Text('الاسم')),
+                DropdownMenuItem(value: 'type', child: Text('النوع')),
+                DropdownMenuItem(value: 'vendorId', child: Text('معرف البائع')),
+                DropdownMenuItem(value: 'email', child: Text('البريد الإلكتروني')),
+                DropdownMenuItem(value: 'mobile', child: Text('الجوال')),
+                DropdownMenuItem(value: 'status', child: Text('الحالة')),
+                DropdownMenuItem(value: 'confirm', child: Text('التأكيد')),
+                DropdownMenuItem(value: 'createdAt', child: Text('تاريخ الإنشاء')),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _sortBy = value!;
+                  _applyFilter();
+                });
+              },
+            ),
+          ),
+          IconButton(
+            icon: Icon(_sortAscending ? Icons.arrow_upward : Icons.arrow_downward),
+            onPressed: () {
+              setState(() {
+                _sortAscending = !_sortAscending;
+                _applyFilter();
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminCard(Admin admin) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          gradient: LinearGradient(
+            colors: [Colors.white, Colors.brown.shade50],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD7CCC8),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: const Color(0xFF5D4037), width: 2),
+                ),
+                child: admin.image.isNotEmpty
+                    ? Builder(builder: (context) {
+                  Uint8List? decoded = decodeBase64Image(admin.image);
+                  return decoded != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: Image.memory(
+                      decoded,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.person, size: 30, color: Colors.brown),
+                    ),
+                  )
+                      : const Icon(Icons.person, size: 30, color: Colors.brown);
+                })
+                    : const Icon(Icons.person, size: 30, color: Colors.brown),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      admin.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5D4037),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      admin.email,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: admin.status == '1' ? Colors.green.shade100 : Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            admin.status == '1' ? 'نشط' : 'غير نشط',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: admin.status == '1' ? Colors.green.shade700 : Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: admin.confirm.toLowerCase() == 'yes' ? Colors.blue.shade100 : Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            admin.confirm.toLowerCase() == 'yes' ? 'مؤكد' : 'غير مؤكد',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: admin.confirm.toLowerCase() == 'yes' ? Colors.blue.shade700 : Colors.orange.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Color(0xFF5D4037)),
+                    onPressed: () => _showAdminDialog(admin: admin),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteAdmin(admin),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -727,130 +1137,147 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
     );
   }
 
-  Widget _buildAdminCard(Admin admin) {
-    return GestureDetector(
-      onTap: () => _showAdminDialog(admin: admin),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        child: Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-            side: BorderSide(color: Colors.brown.shade200, width: 1),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: const Text(
+          'إدارة المديرين',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF5D4037),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchAdmins,
+            tooltip: "تحديث",
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Colors.white, Colors.brown.shade50],
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD7CCC8),
-                        borderRadius: BorderRadius.circular(35),
-                        border: Border.all(color: const Color(0xFF5D4037), width: 2),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(35),
-                        child: admin.image.isNotEmpty
-                            ? Builder(builder: (context) {
-                          Uint8List? decoded = decodeBase64Image(admin.image);
-                          return decoded != null
-                              ? Image.memory(
-                            decoded,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildPlaceholderIcon(),
-                          )
-                              : _buildPlaceholderIcon();
-                        })
-                            : _buildPlaceholderIcon(),
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            admin.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Color(0xFF5D4037),
-                              fontFamily: 'Tajawal',
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            'البريد: ${admin.email}',
-                            style: const TextStyle(
-                              color: Color(0xFF795548),
-                              overflow: TextOverflow.ellipsis,
-                              fontFamily: 'Tajawal',
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'الجوال: ${admin.mobile}',
-                            style: const TextStyle(
-                              color: Color(0xFF795548),
-                              fontFamily: 'Tajawal',
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Icon(Icons.verified_user,
-                                  size: 16,
-                                  color: admin.confirm == 'Yes' ? Colors.green : Colors.grey),
-                              const SizedBox(width: 5),
-                              Text(
-                                admin.confirm == 'Yes' ? 'تم التأكيد' : 'غير مؤكد',
-                                style: TextStyle(
-                                  color: admin.confirm == 'Yes' ? Colors.green : Colors.grey,
-                                  fontSize: 13,
-                                  fontFamily: 'Tajawal',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Color(0xFF5D4037)),
-                          onPressed: () => _showAdminDialog(admin: admin),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.redAccent),
-                          onPressed: () => _deleteAdmin(admin.id),
-                        ),
-                      ],
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("معلومات التطبيق"),
+                  content: const Text("تطبيق إدارة المديرين مع لوحة إحصائيات وطرق فلترة متقدمة"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("موافق"),
                     ),
                   ],
                 ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.brown.shade600),
+            ),
+            const SizedBox(height: 16),
+            Text("جاري التحميل...", style: TextStyle(color: Colors.grey.shade600)),
+          ],
+        ),
+      )
+          : _admins.isEmpty
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 80, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              "لا توجد مديرين متاحين",
+              style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "اضغط على زر الإضافة لبدء إضافة المديرين",
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      )
+          : SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDashboard(),
+            _buildFilterSection(),
+            _buildSortingSection(),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "عرض ${_filteredAdmins.length} من ${_admins.length} مدير",
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _filteredAdmins.length,
+              itemBuilder: (context, index) {
+                return _buildAdminCard(_filteredAdmins[index]);
+              },
+            ),
+            const SizedBox(height: 80), // مساحة إضافية للـ FloatingActionButton
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAdminDialog(),
+        backgroundColor: const Color(0xFF5D4037),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text("إضافة مدير"),
+        tooltip: "إضافة مدير جديد",
       ),
     );
   }
-
-  Widget _buildPlaceholderIcon() {
-    return const Icon(Icons.person, size: 40, color: Color(0xFF5D4037));
-  }
 }
+
+// كلاس للإحصائيات
+class DashboardStats {
+  final int totalAdmins;
+  final int activeAdmins;
+  final int inactiveAdmins;
+  final int confirmedAdmins;
+  final int unconfirmedAdmins;
+  final int uniqueVendors;
+  final int adminsWithImages;
+  final int adminsWithoutImages;
+  final String mostCommonType;
+  final String mostCommonStatus;
+  final int totalTypes;
+  final double confirmationRate;
+  final double activationRate;
+
+  DashboardStats({
+    required this.totalAdmins,
+    required this.activeAdmins,
+    required this.inactiveAdmins,
+    required this.confirmedAdmins,
+    required this.unconfirmedAdmins,
+    required this.uniqueVendors,
+    required this.adminsWithImages,
+    required this.adminsWithoutImages,
+    required this.mostCommonType,
+    required this.mostCommonStatus,
+    required this.totalTypes,
+    required this.confirmationRate,
+    required this.activationRate,
+  });
+}
+
