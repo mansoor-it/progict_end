@@ -35,7 +35,7 @@ class VendorService {
 
 	// إضافة بائع جديد
 	static Future<String> addVendor(Vendor vendor) async {
-		var map = vendor.toJson();
+		var map = vendor.toJsonForRequest();
 		map['action'] = _add;
 		try {
 			final response = await http.post(url, body: map);
@@ -49,9 +49,9 @@ class VendorService {
 		}
 	}
 
-	// تحديث بيانات بائع
+	// ✅ تحديث بيانات بائع (يستخدم toJsonForRequest لضمان إرسال الصورة بصيغة String)
 	static Future<String> updateVendor(Vendor vendor) async {
-		var map = vendor.toJson();
+		var map = vendor.toJsonForRequest();
 		map['action'] = _update;
 		try {
 			final response = await http.post(url, body: map);
@@ -83,13 +83,13 @@ class VendorService {
 		}
 	}
 
-	// جلب بائع عن طريق الايميل
+	// جلب بائع عن طريق الإيميل
 	static Future<Vendor?> getVendorByEmail(String email) async {
 		try {
 			final response = await http.post(
 				url,
 				body: {
-					'action': 'getVendorByEmail', // تأكد أن هذه الحالة موجودة في الـ API لديك
+					'action': 'getVendorByEmail',
 					'email': email,
 				},
 			);
@@ -118,7 +118,7 @@ class VendorService {
 			final response = await http.post(
 				url,
 				body: {
-					'action': 'login', // تأكد من دعم هذه الحالة في الـ API
+					'action': 'login',
 					'email': email,
 					'password': password,
 				},
@@ -151,7 +151,7 @@ class VendorService {
 
 		if (response.statusCode == 200) {
 			final data = json.decode(response.body);
-			return data['stores']; // حسب شكل الرد من API
+			return data['stores'];
 		} else {
 			throw Exception('Failed to load stores');
 		}

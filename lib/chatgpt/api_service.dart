@@ -1,13 +1,10 @@
-// lib/services/api_service.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 
 class ApiService {
-	// عدل هذا العنوان ليطابق عنوان خادم Flask لديك
-	static const String _baseUrl = 'http://190.30.0.68:5000';
+	static const String _baseUrl = 'http://127.0.0.1:5000';
 
-	/// ترسل استعلام المستخدم إلى نقطة النهاية `/chat_query` وتعيد نص الرد.
 	static Future<String> sendChatQuery(String userQuery) async {
 		final uri = Uri.parse('$_baseUrl/chat_query');
 
@@ -16,17 +13,20 @@ class ApiService {
 				uri,
 				headers: {'Content-Type': 'application/json'},
 				body: jsonEncode({'user_query': userQuery}),
-			);
+			).timeout(const Duration(seconds: 30));
 
 			if (response.statusCode == 200) {
-				final Map<String, dynamic> decoded = jsonDecode(response.body);
-				// نأخذ قيمة الحقل "reply" من الـ JSON الذي يعيده الخادم
+				final Map<String, dynamic> decoded = jsonDecode(utf8.decode(response.bodyBytes));
 				return decoded['reply'] as String? ?? 'لا يوجد رد.';
 			} else {
-				return 'خطأ في الطلب: رمز الحالة ${response.statusCode}';
+				return 'خطأ في الخادم (${response.statusCode})\n${response.body}';
 			}
+		} on TimeoutException {
+			return 'انتهى وقت الانتظار، يرجى المحاولة لاحقاً';
+		} on http.ClientException catch (e) {
+			return 'خطأ في الاتصال: ${e.message}';
 		} catch (e) {
-			return 'حدث خطأ أثناء الاتصال بالخادم: $e';
+			return 'حدث خطأ غير متوقع: $e';
 		}
 	}
 }

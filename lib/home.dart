@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:collection/collection.dart'; // For grouping
 
 // استيراد الصفحات
+import 'chatgpt/chat_query.dart';
 import 'controll/CategoryManagementPage.dart';
 import 'controll/OrderDetailsManagementPage.dart';
 import 'controll/ProductColorsManagementPage.dart';
@@ -83,6 +84,14 @@ class NavigationHomePage extends StatefulWidget {
 
 class _NavigationHomePageState extends State<NavigationHomePage> with SingleTickerProviderStateMixin {
 	final List<NavMenuItem> allItems = [
+		NavMenuItem(
+			label: 'روبوت دردشه',
+			icon: Icons.color_lens,
+			page: ChatScreen(),
+			category: 'products',
+			color: AppColors.primary,
+			description: 'إدارة ألوان المنتجات المتاحة في المتجر.',
+		),
 		NavMenuItem(
 			label: 'إدارة الألوان',
 			icon: Icons.color_lens,
@@ -346,27 +355,32 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 							itemBuilder: (context) => [
 								PopupMenuItem(
 									value: 0,
-									child: Row(
-										children: [
-											Icon(Icons.grid_view, color: AppColors.primary),
-											const SizedBox(width: 8),
-											const Text('عرض شبكي'),
-										],
+									child: Expanded(
+									  child: Row(
+									  	children: [
+									  		Icon(Icons.grid_view, color: AppColors.primary),
+									  		const SizedBox(width: 8),
+									  		const Text('عرض شبكي'),
+									  	],
+									  ),
 									),
 								),
 								PopupMenuItem(
 									value: 1,
-									child: Row(
-										children: [
-											Icon(Icons.list, color: AppColors.primary),
-											const SizedBox(width: 8),
-											const Text('عرض قائمة'),
-										],
+									child: Expanded(
+									  child: Row(
+									  	children: [
+									  		Icon(Icons.list, color: AppColors.primary),
+									  		const SizedBox(width: 8),
+									  		const Text('عرض قائمة'),
+									  	],
+									  ),
 									),
 								),
 								PopupMenuItem(
 									value: 2,
 									child: Row(
+										
 										children: [
 											Icon(Icons.tab, color: AppColors.primary),
 											const SizedBox(width: 8),
@@ -431,51 +445,53 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 			color: AppColors.primary,
 			shape: const CircularNotchedRectangle(),
 			notchMargin: 8,
-			child: Row(
-				mainAxisAlignment: MainAxisAlignment.spaceAround,
-				children: [
-					IconButton(
-						icon: const Icon(Icons.home, color: AppColors.secondary),
-						tooltip: 'الرئيسية',
-						onPressed: () {
-							setState(() {
-								_selectedCategory = 'all';
-								displayedItems = allItems;
-							});
-						},
-					),
-					IconButton(
-						icon: const Icon(Icons.favorite, color: AppColors.secondary),
-						tooltip: 'المفضلة',
-						onPressed: () {
-							setState(() {
-								displayedItems = allItems.where((item) => _favoriteItems.contains(item.label)).toList();
-							});
-							_showSnackBar('تم عرض العناصر المفضلة', success: true);
-						},
-					),
-					const SizedBox(width: 48), // مساحة للزر العائم
-					IconButton(
-						icon: const Icon(Icons.history, color: AppColors.secondary),
-						tooltip: 'الأخيرة',
-						onPressed: () {
-							setState(() {
-								displayedItems = allItems.where((item) => _recentItems.contains(item.label)).toList();
-							});
-							_showSnackBar('تم عرض آخر العناصر المزارة', success: true);
-						},
-					),
-					IconButton(
-						icon: const Icon(Icons.settings, color: AppColors.secondary),
-						tooltip: 'الإعدادات',
-						onPressed: () {
-							setState(() {
-								_selectedCategory = 'settings';
-								displayedItems = allItems.where((item) => item.category == 'settings').toList();
-							});
-						},
-					),
-				],
+			child: Expanded(
+			  child: Row(
+			  	mainAxisAlignment: MainAxisAlignment.spaceAround,
+			  	children: [
+			  		IconButton(
+			  			icon: const Icon(Icons.home, color: AppColors.secondary),
+			  			tooltip: 'الرئيسية',
+			  			onPressed: () {
+			  				setState(() {
+			  					_selectedCategory = 'all';
+			  					displayedItems = allItems;
+			  				});
+			  			},
+			  		),
+			  		IconButton(
+			  			icon: const Icon(Icons.favorite, color: AppColors.secondary),
+			  			tooltip: 'المفضلة',
+			  			onPressed: () {
+			  				setState(() {
+			  					displayedItems = allItems.where((item) => _favoriteItems.contains(item.label)).toList();
+			  				});
+			  				_showSnackBar('تم عرض العناصر المفضلة', success: true);
+			  			},
+			  		),
+			  		const SizedBox(width: 48), // مساحة للزر العائم
+			  		IconButton(
+			  			icon: const Icon(Icons.history, color: AppColors.secondary),
+			  			tooltip: 'الأخيرة',
+			  			onPressed: () {
+			  				setState(() {
+			  					displayedItems = allItems.where((item) => _recentItems.contains(item.label)).toList();
+			  				});
+			  				_showSnackBar('تم عرض آخر العناصر المزارة', success: true);
+			  			},
+			  		),
+			  		IconButton(
+			  			icon: const Icon(Icons.settings, color: AppColors.secondary),
+			  			tooltip: 'الإعدادات',
+			  			onPressed: () {
+			  				setState(() {
+			  					_selectedCategory = 'settings';
+			  					displayedItems = allItems.where((item) => item.category == 'settings').toList();
+			  				});
+			  			},
+			  		),
+			  	],
+			  ),
 			),
 		);
 	}
@@ -495,195 +511,203 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 						topRight: Radius.circular(20),
 					),
 				),
-				child: Column(
-					children: [
-						Container(
-							padding: const EdgeInsets.all(16),
-							decoration: const BoxDecoration(
-								color: AppColors.primary,
-								borderRadius: BorderRadius.only(
-									topLeft: Radius.circular(20),
-									topRight: Radius.circular(20),
-								),
-							),
-							child: Row(
-								children: [
-									const CircleAvatar(
-										backgroundColor: AppColors.secondary,
-										child: Icon(Icons.person, color: AppColors.primary),
-									),
-									const SizedBox(width: 16),
-									const Column(
-										crossAxisAlignment: CrossAxisAlignment.start,
-										children: [
-											Text(
-												'مرحبًا، المدير',
-												style: TextStyle(
-													color: AppColors.secondary,
-													fontWeight: FontWeight.bold,
-													fontSize: 16,
-												),
-											),
-											Text(
-												'admin@example.com',
-												style: TextStyle(
-													color: AppColors.secondary,
-													fontSize: 12,
-												),
-											),
-										],
-									),
-									const Spacer(),
-									IconButton(
-										icon: const Icon(Icons.close, color: AppColors.secondary),
-										onPressed: () {
-											Navigator.pop(context);
-										},
-									),
-								],
-							),
-						),
-						Expanded(
-							child: ListView(
-								padding: const EdgeInsets.all(16),
-								children: [
-									const Text(
-										'الإحصائيات',
-										style: TextStyle(
-											fontWeight: FontWeight.bold,
-											fontSize: 18,
-										),
-									),
-									const SizedBox(height: 8),
-									_buildStatisticsSection(),
-									const Divider(),
-									const Text(
-										'الفئات',
-										style: TextStyle(
-											fontWeight: FontWeight.bold,
-											fontSize: 18,
-										),
-									),
-									const SizedBox(height: 8),
-									_buildDrawerItem('الكل', 'all', Icons.apps),
-									_buildDrawerItem('المنتجات', 'products', Icons.shopping_bag),
-									_buildDrawerItem('المتجر', 'store', Icons.store),
-									_buildDrawerItem('المستخدمين', 'users', Icons.people),
-									_buildDrawerItem('الطلبات', 'orders', Icons.shopping_cart),
-									_buildDrawerItem('الإعدادات', 'settings', Icons.settings),
-									const Divider(),
-									const Text(
-										'المفضلة',
-										style: TextStyle(
-											fontWeight: FontWeight.bold,
-											fontSize: 18,
-										),
-									),
-									const SizedBox(height: 8),
-									if (_favoriteItems.isEmpty)
-										const Padding(
-											padding: EdgeInsets.all(8.0),
-											child: Text(
-												'لا توجد عناصر مفضلة',
-												style: TextStyle(
-													color: AppColors.textSecondary,
-													fontStyle: FontStyle.italic,
-												),
-											),
-										)
-									else
-										..._favoriteItems.map((label) {
-											final item = allItems.firstWhere((item) => item.label == label);
-											return ListTile(
-												leading: Icon(item.icon, color: AppColors.primary),
-												title: Text(item.label),
-												onTap: () {
-													Navigator.pop(context);
-													_navigateTo(item.page);
-													_addToRecentItems(item.label);
-												},
-											);
-										}).toList(),
-									const Divider(),
-									const Text(
-										'آخر الزيارات',
-										style: TextStyle(
-											fontWeight: FontWeight.bold,
-											fontSize: 18,
-										),
-									),
-									const SizedBox(height: 8),
-									if (_recentItems.isEmpty)
-										const Padding(
-											padding: EdgeInsets.all(8.0),
-											child: Text(
-												'لا توجد زيارات حديثة',
-												style: TextStyle(
-													color: AppColors.textSecondary,
-													fontStyle: FontStyle.italic,
-												),
-											),
-										)
-									else
-										..._recentItems.map((label) {
-											final item = allItems.firstWhere((item) => item.label == label);
-											return ListTile(
-												leading: Icon(item.icon, color: AppColors.primary),
-												title: Text(item.label),
-												trailing: Text(
-													'منذ قليل',
-													style: TextStyle(
-														color: AppColors.textSecondary,
-														fontSize: 12,
-													),
-												),
-												onTap: () {
-													Navigator.pop(context);
-													_navigateTo(item.page);
-													_addToRecentItems(item.label);
-												},
-											);
-										}).toList(),
-								],
-							),
-						),
-						Container(
-							padding: const EdgeInsets.all(16),
-							decoration: BoxDecoration(
-								color: AppColors.cardBackground,
-								border: Border(
-									top: BorderSide(color: AppColors.divider),
-								),
-							),
-							child: Row(
-								mainAxisAlignment: MainAxisAlignment.spaceAround,
-								children: [
-									TextButton.icon(
-										icon: const Icon(Icons.logout),
-										label: const Text('تسجيل الخروج'),
-										style: TextButton.styleFrom(
-											foregroundColor: AppColors.error,
-										),
-										onPressed: () {
-											Navigator.pop(context);
-											_showSnackBar('تم تسجيل الخروج', success: false);
-										},
-									),
-									TextButton.icon(
-										icon: const Icon(Icons.help),
-										label: const Text('مساعدة'),
-										style: TextButton.styleFrom(
-											foregroundColor: AppColors.primary,
-										),
-										onPressed: () {
-											Navigator.pop(context);
-											_showHelpDialog(context);
-										},
-									),
-								],
-							),
-						),
-					],
+				child: Expanded(
+				  child: Column(
+				  	children: [
+				  		Container(
+				  			padding: const EdgeInsets.all(16),
+				  			decoration: const BoxDecoration(
+				  				color: AppColors.primary,
+				  				borderRadius: BorderRadius.only(
+				  					topLeft: Radius.circular(20),
+				  					topRight: Radius.circular(20),
+				  				),
+				  			),
+				  			child: Expanded(
+				  			  child: Row(
+				  			  	children: [
+				  			  		const CircleAvatar(
+				  			  			backgroundColor: AppColors.secondary,
+				  			  			child: Icon(Icons.person, color: AppColors.primary),
+				  			  		),
+				  			  		const SizedBox(width: 16),
+				  			  		Expanded(
+				  			  		  child: const Column(
+				  			  		  	crossAxisAlignment: CrossAxisAlignment.start,
+				  			  		  	children: [
+				  			  		  		Text(
+				  			  		  			'مرحبًا، المدير',
+				  			  		  			style: TextStyle(
+				  			  		  				color: AppColors.secondary,
+				  			  		  				fontWeight: FontWeight.bold,
+				  			  		  				fontSize: 16,
+				  			  		  			),
+				  			  		  		),
+				  			  		  		Text(
+				  			  		  			'admin@example.com',
+				  			  		  			style: TextStyle(
+				  			  		  				color: AppColors.secondary,
+				  			  		  				fontSize: 12,
+				  			  		  			),
+				  			  		  		),
+				  			  		  	],
+				  			  		  ),
+				  			  		),
+				  			  		const Spacer(),
+				  			  		IconButton(
+				  			  			icon: const Icon(Icons.close, color: AppColors.secondary),
+				  			  			onPressed: () {
+				  			  				Navigator.pop(context);
+				  			  			},
+				  			  		),
+				  			  	],
+				  			  ),
+				  			),
+				  		),
+				  		Expanded(
+				  			child: ListView(
+				  				padding: const EdgeInsets.all(16),
+				  				children: [
+				  					const Text(
+				  						'الإحصائيات',
+				  						style: TextStyle(
+				  							fontWeight: FontWeight.bold,
+				  							fontSize: 18,
+				  						),
+				  					),
+				  					const SizedBox(height: 8),
+				  					_buildStatisticsSection(),
+				  					const Divider(),
+				  					const Text(
+				  						'الفئات',
+				  						style: TextStyle(
+				  							fontWeight: FontWeight.bold,
+				  							fontSize: 18,
+				  						),
+				  					),
+				  					const SizedBox(height: 8),
+				  					_buildDrawerItem('الكل', 'all', Icons.apps),
+				  					_buildDrawerItem('المنتجات', 'products', Icons.shopping_bag),
+				  					_buildDrawerItem('المتجر', 'store', Icons.store),
+				  					_buildDrawerItem('المستخدمين', 'users', Icons.people),
+				  					_buildDrawerItem('الطلبات', 'orders', Icons.shopping_cart),
+				  					_buildDrawerItem('الإعدادات', 'settings', Icons.settings),
+				  					const Divider(),
+				  					const Text(
+				  						'المفضلة',
+				  						style: TextStyle(
+				  							fontWeight: FontWeight.bold,
+				  							fontSize: 18,
+				  						),
+				  					),
+				  					const SizedBox(height: 8),
+				  					if (_favoriteItems.isEmpty)
+				  						const Padding(
+				  							padding: EdgeInsets.all(8.0),
+				  							child: Text(
+				  								'لا توجد عناصر مفضلة',
+				  								style: TextStyle(
+				  									color: AppColors.textSecondary,
+				  									fontStyle: FontStyle.italic,
+				  								),
+				  							),
+				  						)
+				  					else
+				  						..._favoriteItems.map((label) {
+				  							final item = allItems.firstWhere((item) => item.label == label);
+				  							return ListTile(
+				  								leading: Icon(item.icon, color: AppColors.primary),
+				  								title: Text(item.label),
+				  								onTap: () {
+				  									Navigator.pop(context);
+				  									_navigateTo(item.page);
+				  									_addToRecentItems(item.label);
+				  								},
+				  							);
+				  						}).toList(),
+				  					const Divider(),
+				  					const Text(
+				  						'آخر الزيارات',
+				  						style: TextStyle(
+				  							fontWeight: FontWeight.bold,
+				  							fontSize: 18,
+				  						),
+				  					),
+				  					const SizedBox(height: 8),
+				  					if (_recentItems.isEmpty)
+				  						const Padding(
+				  							padding: EdgeInsets.all(8.0),
+				  							child: Text(
+				  								'لا توجد زيارات حديثة',
+				  								style: TextStyle(
+				  									color: AppColors.textSecondary,
+				  									fontStyle: FontStyle.italic,
+				  								),
+				  							),
+				  						)
+				  					else
+				  						..._recentItems.map((label) {
+				  							final item = allItems.firstWhere((item) => item.label == label);
+				  							return ListTile(
+				  								leading: Icon(item.icon, color: AppColors.primary),
+				  								title: Text(item.label),
+				  								trailing: Text(
+				  									'منذ قليل',
+				  									style: TextStyle(
+				  										color: AppColors.textSecondary,
+				  										fontSize: 12,
+				  									),
+				  								),
+				  								onTap: () {
+				  									Navigator.pop(context);
+				  									_navigateTo(item.page);
+				  									_addToRecentItems(item.label);
+				  								},
+				  							);
+				  						}).toList(),
+				  				],
+				  			),
+				  		),
+				  		Container(
+				  			padding: const EdgeInsets.all(16),
+				  			decoration: BoxDecoration(
+				  				color: AppColors.cardBackground,
+				  				border: Border(
+				  					top: BorderSide(color: AppColors.divider),
+				  				),
+				  			),
+				  			child: Expanded(
+				  			  child: Row(
+				  			  	mainAxisAlignment: MainAxisAlignment.spaceAround,
+				  			  	children: [
+				  			  		TextButton.icon(
+				  			  			icon: const Icon(Icons.logout),
+				  			  			label: const Text('تسجيل الخروج'),
+				  			  			style: TextButton.styleFrom(
+				  			  				foregroundColor: AppColors.error,
+				  			  			),
+				  			  			onPressed: () {
+				  			  				Navigator.pop(context);
+				  			  				_showSnackBar('تم تسجيل الخروج', success: false);
+				  			  			},
+				  			  		),
+				  			  		TextButton.icon(
+				  			  			icon: const Icon(Icons.help),
+				  			  			label: const Text('مساعدة'),
+				  			  			style: TextButton.styleFrom(
+				  			  				foregroundColor: AppColors.primary,
+				  			  			),
+				  			  			onPressed: () {
+				  			  				Navigator.pop(context);
+				  			  				_showHelpDialog(context);
+				  			  			},
+				  			  		),
+				  			  	],
+				  			  ),
+				  			),
+				  		),
+				  	],
+				  ),
 				),
 			),
 		);
@@ -693,16 +717,18 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 	Widget _buildStatisticsSection() {
 		final groupedItems = groupBy(allItems, (NavMenuItem item) => item.category);
 
-		return Column(
-			crossAxisAlignment: CrossAxisAlignment.start,
-			children: [
-				_buildStatisticItem('إجمالي العناصر', allItems.length, Icons.all_inclusive, AppColors.primary),
-				_buildStatisticItem('المنتجات', groupedItems['products']?.length ?? 0, Icons.shopping_bag, AppColors.info),
-				_buildStatisticItem('المتجر', groupedItems['store']?.length ?? 0, Icons.store, AppColors.success),
-				_buildStatisticItem('المستخدمين', groupedItems['users']?.length ?? 0, Icons.people, AppColors.warning),
-				_buildStatisticItem('الطلبات', groupedItems['orders']?.length ?? 0, Icons.shopping_cart, AppColors.error),
-				_buildStatisticItem('الإعدادات', groupedItems['settings']?.length ?? 0, Icons.settings, AppColors.textSecondary),
-			],
+		return Expanded(
+		  child: Column(
+		  	crossAxisAlignment: CrossAxisAlignment.start,
+		  	children: [
+		  		_buildStatisticItem('إجمالي العناصر', allItems.length, Icons.all_inclusive, AppColors.primary),
+		  		_buildStatisticItem('المنتجات', groupedItems['products']?.length ?? 0, Icons.shopping_bag, AppColors.info),
+		  		_buildStatisticItem('المتجر', groupedItems['store']?.length ?? 0, Icons.store, AppColors.success),
+		  		_buildStatisticItem('المستخدمين', groupedItems['users']?.length ?? 0, Icons.people, AppColors.warning),
+		  		_buildStatisticItem('الطلبات', groupedItems['orders']?.length ?? 0, Icons.shopping_cart, AppColors.error),
+		  		_buildStatisticItem('الإعدادات', groupedItems['settings']?.length ?? 0, Icons.settings, AppColors.textSecondary),
+		  	],
+		  ),
 		);
 	}
 
@@ -710,24 +736,26 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 	Widget _buildStatisticItem(String title, int count, IconData icon, Color color) {
 		return Padding(
 			padding: const EdgeInsets.symmetric(vertical: 4.0),
-			child: Row(
-				children: [
-					Icon(icon, color: color, size: 20),
-					const SizedBox(width: 8),
-					Text(
-						'$title: ',
-						style: const TextStyle(
-							fontWeight: FontWeight.bold,
-						),
-					),
-					Text(
-						'$count',
-						style: TextStyle(
-							color: color,
-							fontWeight: FontWeight.bold,
-						),
-					),
-				],
+			child: Expanded(
+			  child: Row(
+			  	children: [
+			  		Icon(icon, color: color, size: 20),
+			  		const SizedBox(width: 8),
+			  		Text(
+			  			'$title: ',
+			  			style: const TextStyle(
+			  				fontWeight: FontWeight.bold,
+			  			),
+			  		),
+			  		Text(
+			  			'$count',
+			  			style: TextStyle(
+			  				color: color,
+			  				fontWeight: FontWeight.bold,
+			  			),
+			  		),
+			  	],
+			  ),
 			),
 		);
 	}
@@ -773,58 +801,60 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 				),
 				child: Padding(
 					padding: const EdgeInsets.all(16),
-					child: Column(
-						mainAxisSize: MainAxisSize.min,
-						children: [
-							const Text(
-								'مساعدة',
-								style: TextStyle(
-									fontSize: 20,
-									fontWeight: FontWeight.bold,
-								),
-							),
-							const SizedBox(height: 16),
-							const Text(
-								'لوحة التحكم الإدارية تتيح لك إدارة جميع جوانب المتجر الإلكتروني بسهولة.',
-								textAlign: TextAlign.center,
-							),
-							const SizedBox(height: 16),
-							const Text(
-								'طرق العرض المتاحة:',
-								style: TextStyle(
-									fontWeight: FontWeight.bold,
-								),
-							),
-							const SizedBox(height: 8),
-							_buildHelpItem(Icons.grid_view, 'عرض شبكي', 'عرض العناصر في شكل شبكة.'),
-							_buildHelpItem(Icons.list, 'عرض قائمة', 'عرض العناصر في شكل قائمة.'),
-							_buildHelpItem(Icons.tab, 'عرض تبويبي', 'عرض العناصر مقسمة حسب الفئات.'),
-							const SizedBox(height: 16),
-							const Text(
-								'الميزات المتاحة:',
-								style: TextStyle(
-									fontWeight: FontWeight.bold,
-								),
-							),
-							const SizedBox(height: 8),
-							_buildHelpItem(Icons.favorite, 'المفضلة', 'إضافة العناصر المهمة إلى المفضلة للوصول السريع.'),
-							_buildHelpItem(Icons.history, 'آخر الزيارات', 'عرض آخر العناصر التي تمت زيارتها.'),
-							_buildHelpItem(Icons.search, 'البحث', 'البحث عن العناصر بالاسم أو الوصف.'),
-							const SizedBox(height: 16),
-							ElevatedButton(
-								style: ElevatedButton.styleFrom(
-									backgroundColor: AppColors.primary,
-									foregroundColor: AppColors.secondary,
-									shape: RoundedRectangleBorder(
-										borderRadius: BorderRadius.circular(10),
-									),
-								),
-								onPressed: () {
-									Navigator.pop(context);
-								},
-								child: const Text('فهمت'),
-							),
-						],
+					child: Expanded(
+					  child: Column(
+					  	mainAxisSize: MainAxisSize.min,
+					  	children: [
+					  		const Text(
+					  			'مساعدة',
+					  			style: TextStyle(
+					  				fontSize: 20,
+					  				fontWeight: FontWeight.bold,
+					  			),
+					  		),
+					  		const SizedBox(height: 16),
+					  		const Text(
+					  			'لوحة التحكم الإدارية تتيح لك إدارة جميع جوانب المتجر الإلكتروني بسهولة.',
+					  			textAlign: TextAlign.center,
+					  		),
+					  		const SizedBox(height: 16),
+					  		const Text(
+					  			'طرق العرض المتاحة:',
+					  			style: TextStyle(
+					  				fontWeight: FontWeight.bold,
+					  			),
+					  		),
+					  		const SizedBox(height: 8),
+					  		_buildHelpItem(Icons.grid_view, 'عرض شبكي', 'عرض العناصر في شكل شبكة.'),
+					  		_buildHelpItem(Icons.list, 'عرض قائمة', 'عرض العناصر في شكل قائمة.'),
+					  		_buildHelpItem(Icons.tab, 'عرض تبويبي', 'عرض العناصر مقسمة حسب الفئات.'),
+					  		const SizedBox(height: 16),
+					  		const Text(
+					  			'الميزات المتاحة:',
+					  			style: TextStyle(
+					  				fontWeight: FontWeight.bold,
+					  			),
+					  		),
+					  		const SizedBox(height: 8),
+					  		_buildHelpItem(Icons.favorite, 'المفضلة', 'إضافة العناصر المهمة إلى المفضلة للوصول السريع.'),
+					  		_buildHelpItem(Icons.history, 'آخر الزيارات', 'عرض آخر العناصر التي تمت زيارتها.'),
+					  		_buildHelpItem(Icons.search, 'البحث', 'البحث عن العناصر بالاسم أو الوصف.'),
+					  		const SizedBox(height: 16),
+					  		ElevatedButton(
+					  			style: ElevatedButton.styleFrom(
+					  				backgroundColor: AppColors.primary,
+					  				foregroundColor: AppColors.secondary,
+					  				shape: RoundedRectangleBorder(
+					  					borderRadius: BorderRadius.circular(10),
+					  				),
+					  			),
+					  			onPressed: () {
+					  				Navigator.pop(context);
+					  			},
+					  			child: const Text('فهمت'),
+					  		),
+					  	],
+					  ),
 					),
 				),
 			),
@@ -894,37 +924,39 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 
 		if (items.isEmpty) {
 			return Center(
-				child: Column(
-					mainAxisAlignment: MainAxisAlignment.center,
-					children: [
-						Icon(
-							Icons.search_off,
-							size: 64,
-							color: AppColors.textSecondary,
-						),
-						const SizedBox(height: 16),
-						Text(
-							'لا توجد عناصر في هذه الفئة',
-							style: TextStyle(
-								fontSize: 18,
-								color: AppColors.textSecondary,
-							),
-						),
-						const SizedBox(height: 24),
-						ElevatedButton.icon(
-							icon: const Icon(Icons.refresh),
-							label: const Text('عرض الكل'),
-							style: ElevatedButton.styleFrom(
-								backgroundColor: AppColors.primary,
-								foregroundColor: AppColors.secondary,
-							),
-							onPressed: () {
-								setState(() {
-									displayedItems = allItems;
-								});
-							},
-						),
-					],
+				child: Expanded(
+				  child: Column(
+				  	mainAxisAlignment: MainAxisAlignment.center,
+				  	children: [
+				  		Icon(
+				  			Icons.search_off,
+				  			size: 64,
+				  			color: AppColors.textSecondary,
+				  		),
+				  		const SizedBox(height: 16),
+				  		Text(
+				  			'لا توجد عناصر في هذه الفئة',
+				  			style: TextStyle(
+				  				fontSize: 18,
+				  				color: AppColors.textSecondary,
+				  			),
+				  		),
+				  		const SizedBox(height: 24),
+				  		ElevatedButton.icon(
+				  			icon: const Icon(Icons.refresh),
+				  			label: const Text('عرض الكل'),
+				  			style: ElevatedButton.styleFrom(
+				  				backgroundColor: AppColors.primary,
+				  				foregroundColor: AppColors.secondary,
+				  			),
+				  			onPressed: () {
+				  				setState(() {
+				  					displayedItems = allItems;
+				  				});
+				  			},
+				  		),
+				  	],
+				  ),
 				),
 			);
 		}
@@ -945,108 +977,110 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 			color: AppColors.background,
 			child: Padding(
 				padding: const EdgeInsets.all(16.0),
-				child: Column(
-					children: [
-						// شريط البحث
-						TextField(
-							onChanged: _filterItems,
-							decoration: InputDecoration(
-								hintText: "ابحث هنا...",
-								prefixIcon: Icon(Icons.search, color: AppColors.primary),
-								border: OutlineInputBorder(
-									borderRadius: BorderRadius.circular(30),
-									borderSide: BorderSide(color: AppColors.primary),
-								),
-								focusedBorder: OutlineInputBorder(
-									borderRadius: BorderRadius.circular(30),
-									borderSide: BorderSide(color: AppColors.primary, width: 2),
-								),
-								filled: true,
-								fillColor: AppColors.cardBackground,
-								suffixIcon: displayedItems.length != allItems.length
-										? IconButton(
-									icon: Icon(Icons.close, color: AppColors.primary),
-									onPressed: () {
-										setState(() {
-											displayedItems = allItems;
-										});
-									},
-								)
-										: null,
-							),
-						),
-						const SizedBox(height: 20),
-
-						// عرض الفئات
-						SizedBox(
-							height: 50,
-							child: ListView(
-								scrollDirection: Axis.horizontal,
-								children: [
-									_buildCategoryChip('الكل', 'all'),
-									_buildCategoryChip('المنتجات', 'products'),
-									_buildCategoryChip('المتجر', 'store'),
-									_buildCategoryChip('المستخدمين', 'users'),
-									_buildCategoryChip('الطلبات', 'orders'),
-									_buildCategoryChip('الإعدادات', 'settings'),
-								],
-							),
-						),
-						const SizedBox(height: 20),
-
-						// العرض الشبكي
-						Expanded(
-							child: displayedItems.isEmpty
-									? Center(
-								child: Column(
-									mainAxisAlignment: MainAxisAlignment.center,
-									children: [
-										Icon(
-											Icons.search_off,
-											size: 64,
-											color: AppColors.textSecondary,
-										),
-										const SizedBox(height: 16),
-										Text(
-											'لا توجد نتائج مطابقة للبحث',
-											style: TextStyle(
-												fontSize: 18,
-												color: AppColors.textSecondary,
-											),
-										),
-										const SizedBox(height: 24),
-										ElevatedButton.icon(
-											icon: const Icon(Icons.refresh),
-											label: const Text('عرض الكل'),
-											style: ElevatedButton.styleFrom(
-												backgroundColor: AppColors.primary,
-												foregroundColor: AppColors.secondary,
-											),
-											onPressed: () {
-												setState(() {
-													displayedItems = allItems;
-												});
-											},
-										),
-									],
-								),
-							)
-									: GridView.builder(
-								controller: _scrollController,
-								gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-									crossAxisCount: 2,
-									crossAxisSpacing: 15,
-									mainAxisSpacing: 15,
-									childAspectRatio: 1.0, // تعديل النسبة لتناسب المحتوى
-								),
-								itemCount: displayedItems.length,
-								itemBuilder: (context, index) {
-									final item = displayedItems[index];
-									return _buildGridItem(item);
-								},
-							),
-						),
-					],
+				child: Expanded(
+				  child: Column(
+				  	children: [
+				  		// شريط البحث
+				  		TextField(
+				  			onChanged: _filterItems,
+				  			decoration: InputDecoration(
+				  				hintText: "ابحث هنا...",
+				  				prefixIcon: Icon(Icons.search, color: AppColors.primary),
+				  				border: OutlineInputBorder(
+				  					borderRadius: BorderRadius.circular(30),
+				  					borderSide: BorderSide(color: AppColors.primary),
+				  				),
+				  				focusedBorder: OutlineInputBorder(
+				  					borderRadius: BorderRadius.circular(30),
+				  					borderSide: BorderSide(color: AppColors.primary, width: 2),
+				  				),
+				  				filled: true,
+				  				fillColor: AppColors.cardBackground,
+				  				suffixIcon: displayedItems.length != allItems.length
+				  						? IconButton(
+				  					icon: Icon(Icons.close, color: AppColors.primary),
+				  					onPressed: () {
+				  						setState(() {
+				  							displayedItems = allItems;
+				  						});
+				  					},
+				  				)
+				  						: null,
+				  			),
+				  		),
+				  		const SizedBox(height: 20),
+				  
+				  		// عرض الفئات
+				  		SizedBox(
+				  			height: 50,
+				  			child: ListView(
+				  				scrollDirection: Axis.horizontal,
+				  				children: [
+				  					_buildCategoryChip('الكل', 'all'),
+				  					_buildCategoryChip('المنتجات', 'products'),
+				  					_buildCategoryChip('المتجر', 'store'),
+				  					_buildCategoryChip('المستخدمين', 'users'),
+				  					_buildCategoryChip('الطلبات', 'orders'),
+				  					_buildCategoryChip('الإعدادات', 'settings'),
+				  				],
+				  			),
+				  		),
+				  		const SizedBox(height: 20),
+				  
+				  		// العرض الشبكي
+				  		Expanded(
+				  			child: displayedItems.isEmpty
+				  					? Center(
+				  				child: Column(
+				  					mainAxisAlignment: MainAxisAlignment.center,
+				  					children: [
+				  						Icon(
+				  							Icons.search_off,
+				  							size: 64,
+				  							color: AppColors.textSecondary,
+				  						),
+				  						const SizedBox(height: 16),
+				  						Text(
+				  							'لا توجد نتائج مطابقة للبحث',
+				  							style: TextStyle(
+				  								fontSize: 18,
+				  								color: AppColors.textSecondary,
+				  							),
+				  						),
+				  						const SizedBox(height: 24),
+				  						ElevatedButton.icon(
+				  							icon: const Icon(Icons.refresh),
+				  							label: const Text('عرض الكل'),
+				  							style: ElevatedButton.styleFrom(
+				  								backgroundColor: AppColors.primary,
+				  								foregroundColor: AppColors.secondary,
+				  							),
+				  							onPressed: () {
+				  								setState(() {
+				  									displayedItems = allItems;
+				  								});
+				  							},
+				  						),
+				  					],
+				  				),
+				  			)
+				  					: GridView.builder(
+				  				controller: _scrollController,
+				  				gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+				  					crossAxisCount: 2,
+				  					crossAxisSpacing: 15,
+				  					mainAxisSpacing: 15,
+				  					childAspectRatio: 1.0, // تعديل النسبة لتناسب المحتوى
+				  				),
+				  				itemCount: displayedItems.length,
+				  				itemBuilder: (context, index) {
+				  					final item = displayedItems[index];
+				  					return _buildGridItem(item);
+				  				},
+				  			),
+				  		),
+				  	],
+				  ),
 				),
 			),
 		);
@@ -1103,88 +1137,93 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 					SliverPadding(
 						padding: const EdgeInsets.all(16),
 						sliver: SliverToBoxAdapter(
-							child: Column(
-								children: [
-									TextField(
-										onChanged: _filterItems,
-										decoration: InputDecoration(
-											hintText: "ابحث هنا...",
-											prefixIcon: Icon(Icons.search, color: AppColors.primary),
-											border: OutlineInputBorder(
-												borderRadius: BorderRadius.circular(30),
-												borderSide: BorderSide(color: AppColors.primary),
-											),
-											focusedBorder: OutlineInputBorder(
-												borderRadius: BorderRadius.circular(30),
-												borderSide: BorderSide(color: AppColors.primary, width: 2),
-											),
-											filled: true,
-											fillColor: AppColors.cardBackground,
-											suffixIcon: displayedItems.length != allItems.length
-													? IconButton(
-												icon: Icon(Icons.close, color: AppColors.primary),
-												onPressed: () {
-													setState(() {
-														displayedItems = allItems;
-													});
-												},
-											)
-													: null,
-										),
-									),
-									const SizedBox(height: 16),
-									SizedBox(
-										height: 50,
-										child: ListView(
-											scrollDirection: Axis.horizontal,
-											children: [
-												_buildCategoryChip('الكل', 'all'),
-												_buildCategoryChip('المنتجات', 'products'),
-												_buildCategoryChip('المتجر', 'store'),
-												_buildCategoryChip('المستخدمين', 'users'),
-												_buildCategoryChip('الطلبات', 'orders'),
-												_buildCategoryChip('الإعدادات', 'settings'),
-											],
-										),
-									),
-								],
+							child: Expanded(
+							  child: Column(
+									mainAxisAlignment: MainAxisAlignment.center,
+							  	children: [
+							  		TextField(
+							  			onChanged: _filterItems,
+							  			decoration: InputDecoration(
+							  				hintText: "ابحث هنا...",
+							  				prefixIcon: Icon(Icons.search, color: AppColors.primary),
+							  				border: OutlineInputBorder(
+							  					borderRadius: BorderRadius.circular(30),
+							  					borderSide: BorderSide(color: AppColors.primary),
+							  				),
+							  				focusedBorder: OutlineInputBorder(
+							  					borderRadius: BorderRadius.circular(30),
+							  					borderSide: BorderSide(color: AppColors.primary, width: 2),
+							  				),
+							  				filled: true,
+							  				fillColor: AppColors.cardBackground,
+							  				suffixIcon: displayedItems.length != allItems.length
+							  						? IconButton(
+							  					icon: Icon(Icons.close, color: AppColors.primary),
+							  					onPressed: () {
+							  						setState(() {
+							  							displayedItems = allItems;
+							  						});
+							  					},
+							  				)
+							  						: null,
+							  			),
+							  		),
+							  		const SizedBox(height: 16),
+							  		SizedBox(
+							  			height: 50,
+							  			child: ListView(
+							  				scrollDirection: Axis.horizontal,
+							  				children: [
+							  					_buildCategoryChip('الكل', 'all'),
+							  					_buildCategoryChip('المنتجات', 'products'),
+							  					_buildCategoryChip('المتجر', 'store'),
+							  					_buildCategoryChip('المستخدمين', 'users'),
+							  					_buildCategoryChip('الطلبات', 'orders'),
+							  					_buildCategoryChip('الإعدادات', 'settings'),
+							  				],
+							  			),
+							  		),
+							  	],
+							  ),
 							),
 						),
 					),
 					displayedItems.isEmpty
 							? SliverFillRemaining(
 						child: Center(
-							child: Column(
-								mainAxisAlignment: MainAxisAlignment.center,
-								children: [
-									Icon(
-										Icons.search_off,
-										size: 64,
-										color: AppColors.textSecondary,
-									),
-									const SizedBox(height: 16),
-									Text(
-										'لا توجد نتائج مطابقة للبحث',
-										style: TextStyle(
-											fontSize: 18,
-											color: AppColors.textSecondary,
-										),
-									),
-									const SizedBox(height: 24),
-									ElevatedButton.icon(
-										icon: const Icon(Icons.refresh),
-										label: const Text('عرض الكل'),
-										style: ElevatedButton.styleFrom(
-											backgroundColor: AppColors.primary,
-											foregroundColor: AppColors.secondary,
-										),
-										onPressed: () {
-											setState(() {
-												displayedItems = allItems;
-											});
-										},
-									),
-								],
+							child: Expanded(
+							  child: Column(
+							  	mainAxisAlignment: MainAxisAlignment.center,
+							  	children: [
+							  		Icon(
+							  			Icons.search_off,
+							  			size: 64,
+							  			color: AppColors.textSecondary,
+							  		),
+							  		const SizedBox(height: 16),
+							  		Text(
+							  			'لا توجد نتائج مطابقة للبحث',
+							  			style: TextStyle(
+							  				fontSize: 18,
+							  				color: AppColors.textSecondary,
+							  			),
+							  		),
+							  		const SizedBox(height: 24),
+							  		ElevatedButton.icon(
+							  			icon: const Icon(Icons.refresh),
+							  			label: const Text('عرض الكل'),
+							  			style: ElevatedButton.styleFrom(
+							  				backgroundColor: AppColors.primary,
+							  				foregroundColor: AppColors.secondary,
+							  			),
+							  			onPressed: () {
+							  				setState(() {
+							  					displayedItems = allItems;
+							  				});
+							  			},
+							  		),
+							  	],
+							  ),
 							),
 						),
 					)
@@ -1228,47 +1267,49 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 						// المحتوى الرئيسي
 						Padding(
 							padding: const EdgeInsets.all(16.0),
-							child: Column(
-								mainAxisAlignment: MainAxisAlignment.center,
-								children: [
-									Icon(item.icon, size: 40, color: AppColors.secondary),
-									const SizedBox(height: 10),
-									Text(
-										item.label,
-										textAlign: TextAlign.center,
-										style: const TextStyle(
-											color: AppColors.secondary,
-											fontSize: 16,
-											fontWeight: FontWeight.bold,
-										),
-									),
-									const SizedBox(height: 5),
-									Container(
-										padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-										decoration: BoxDecoration(
-											color: AppColors.secondary.withOpacity(0.2),
-											borderRadius: BorderRadius.circular(10),
-										),
-										child: Text(
-											_getCategoryName(item.category),
-											style: TextStyle(
-												color: AppColors.secondary,
-												fontSize: 12,
-											),
-										),
-									),
-									const SizedBox(height: 8),
-									Text(
-										item.description,
-										textAlign: TextAlign.center,
-										maxLines: 2,
-										overflow: TextOverflow.ellipsis,
-										style: TextStyle(
-											color: AppColors.secondary.withOpacity(0.8),
-											fontSize: 12,
-										),
-									),
-								],
+							child: Expanded(
+							  child: Column(
+							  	mainAxisAlignment: MainAxisAlignment.center,
+							  	children: [
+							  		Icon(item.icon, size: 40, color: AppColors.secondary),
+							  		const SizedBox(height: 10),
+							  		Text(
+							  			item.label,
+							  			textAlign: TextAlign.center,
+							  			style: const TextStyle(
+							  				color: AppColors.secondary,
+							  				fontSize: 16,
+							  				fontWeight: FontWeight.bold,
+							  			),
+							  		),
+							  		const SizedBox(height: 5),
+							  		Container(
+							  			padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+							  			decoration: BoxDecoration(
+							  				color: AppColors.secondary.withOpacity(0.2),
+							  				borderRadius: BorderRadius.circular(10),
+							  			),
+							  			child: Text(
+							  				_getCategoryName(item.category),
+							  				style: TextStyle(
+							  					color: AppColors.secondary,
+							  					fontSize: 12,
+							  				),
+							  			),
+							  		),
+							  		const SizedBox(height: 8),
+							  		Text(
+							  			item.description,
+							  			textAlign: TextAlign.center,
+							  			maxLines: 2,
+							  			overflow: TextOverflow.ellipsis,
+							  			style: TextStyle(
+							  				color: AppColors.secondary.withOpacity(0.8),
+							  				fontSize: 12,
+							  			),
+							  		),
+							  	],
+							  ),
 							),
 						),
 
@@ -1336,75 +1377,78 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 					),
 					child: Padding(
 						padding: const EdgeInsets.all(16.0),
-						child: Row(
-							children: [
-								Container(
-									padding: const EdgeInsets.all(12),
-									decoration: BoxDecoration(
-										color: AppColors.primary,
-										shape: BoxShape.circle,
-									),
-									child: Icon(item.icon, color: AppColors.secondary),
-								),
-								const SizedBox(width: 16),
-								Expanded(
-									child: Column(
-										crossAxisAlignment: CrossAxisAlignment.start,
-										children: [
-											Text(
-												item.label,
-												style: TextStyle(
-													fontSize: 18,
-													color: AppColors.textPrimary,
-													fontWeight: FontWeight.bold,
-												),
-											),
-											const SizedBox(height: 4),
-											Row(
-												children: [
-													Container(
-														padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-														decoration: BoxDecoration(
-															color: AppColors.primary,
-															borderRadius: BorderRadius.circular(10),
-														),
-														child: Text(
-															_getCategoryName(item.category),
-															style: TextStyle(
-																color: AppColors.secondary,
-																fontSize: 12,
-															),
-														),
-													),
-													const SizedBox(width: 8),
-													Expanded(
-														child: Text(
-															item.description,
-															maxLines: 1,
-															overflow: TextOverflow.ellipsis,
-															style: TextStyle(
-																fontSize: 14,
-																color: AppColors.textSecondary,
-															),
-														),
-													),
-												],
-											),
-										],
-									),
-								),
-								IconButton(
-									icon: Icon(
-										isFavorite ? Icons.favorite : Icons.favorite_border,
-										color: isFavorite ? Colors.red : AppColors.textSecondary,
-									),
-									tooltip: isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة',
-									onPressed: () {
-										_toggleFavorite(item.label);
-									},
-								),
-								Icon(Icons.chevron_left, color: AppColors.primary),
-							],
+						child: Expanded(
+						  child: Row(
+								mainAxisAlignment: MainAxisAlignment.center,
+						  	children: [
+						  		Container(
+						  			padding: const EdgeInsets.all(12),
+						  			decoration: BoxDecoration(
+						  				color: AppColors.primary,
+						  				shape: BoxShape.circle,
+						  			),
+						  			child: Icon(item.icon, color: AppColors.secondary),
+						  		),
+						  		const SizedBox(width: 16),
+						  		Expanded(
+						  			child: Column(
+						  				crossAxisAlignment: CrossAxisAlignment.start,
+						  				children: [
+						  					Text(
+						  						item.label,
+						  						style: TextStyle(
+						  							fontSize: 18,
+						  							color: AppColors.textPrimary,
+						  							fontWeight: FontWeight.bold,
+						  						),
+						  					),
+						  					const SizedBox(height: 4),
+						  					Row(
+						  						children: [
+						  							Container(
+						  								padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+						  								decoration: BoxDecoration(
+						  									color: AppColors.primary,
+						  									borderRadius: BorderRadius.circular(10),
+						  								),
+						  								child: Text(
+						  									_getCategoryName(item.category),
+						  									style: TextStyle(
+						  										color: AppColors.secondary,
+						  										fontSize: 12,
+						  									),
+						  								),
+						  							),
+						  							const SizedBox(width: 8),
+						  							Expanded(
+						  								child: Text(
+						  									item.description,
+						  									maxLines: 1,
+						  									overflow: TextOverflow.ellipsis,
+						  									style: TextStyle(
+						  										fontSize: 14,
+						  										color: AppColors.textSecondary,
+						  									),
+						  								),
+						  							),
+						  						],
+						  					),
+						  				],
+						  			),
+						  		),
+						  		IconButton(
+						  			icon: Icon(
+						  				isFavorite ? Icons.favorite : Icons.favorite_border,
+						  				color: isFavorite ? Colors.red : AppColors.textSecondary,
+						  			),
+						  			tooltip: isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة',
+						  			onPressed: () {
+						  				_toggleFavorite(item.label);
+						  			},
+						  		),
+						  		Icon(Icons.chevron_left, color: AppColors.primary),
+						  	],
+						  ),
 						),
 					),
 				),
@@ -1443,74 +1487,76 @@ class _NavigationHomePageState extends State<NavigationHomePage> with SingleTick
 				backgroundColor: AppColors.background,
 				child: Padding(
 					padding: const EdgeInsets.all(16.0),
-					child: Column(
-						mainAxisSize: MainAxisSize.min,
-						children: [
-							Text(
-								"بحث في لوحة التحكم",
-								style: TextStyle(
-									fontSize: 20,
-									fontWeight: FontWeight.bold,
-									color: AppColors.textPrimary,
-								),
-							),
-							const SizedBox(height: 16),
-							TextField(
-								onChanged: (value) {
-									_filterItems(value);
-									if (value.isEmpty) {
-										setState(() {
-											displayedItems = allItems;
-										});
-									}
-								},
-								autofocus: true,
-								decoration: InputDecoration(
-									hintText: "اكتب للبحث...",
-									prefixIcon: Icon(Icons.search, color: AppColors.primary),
-									border: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(15),
-										borderSide: BorderSide(color: AppColors.primary),
-									),
-									focusedBorder: OutlineInputBorder(
-										borderRadius: BorderRadius.circular(15),
-										borderSide: BorderSide(color: AppColors.primary, width: 2),
-									),
-								),
-							),
-							const SizedBox(height: 16),
-							const Text(
-								"يمكنك البحث بالاسم أو الوصف",
-								style: TextStyle(
-									color: AppColors.textSecondary,
-									fontSize: 12,
-								),
-							),
-							const SizedBox(height: 16),
-							Row(
-								mainAxisAlignment: MainAxisAlignment.end,
-								children: [
-									TextButton(
-										onPressed: () => Navigator.of(context).pop(),
-										style: TextButton.styleFrom(
-											foregroundColor: AppColors.primary,
-										),
-										child: const Text("إغلاق"),
-									),
-									const SizedBox(width: 8),
-									ElevatedButton(
-										onPressed: () {
-											Navigator.of(context).pop();
-										},
-										style: ElevatedButton.styleFrom(
-											backgroundColor: AppColors.primary,
-											foregroundColor: AppColors.secondary,
-										),
-										child: const Text("بحث"),
-									),
-								],
-							),
-						],
+					child: Expanded(
+					  child: Column(
+					  	mainAxisSize: MainAxisSize.min,
+					  	children: [
+					  		Text(
+					  			"بحث في لوحة التحكم",
+					  			style: TextStyle(
+					  				fontSize: 20,
+					  				fontWeight: FontWeight.bold,
+					  				color: AppColors.textPrimary,
+					  			),
+					  		),
+					  		const SizedBox(height: 16),
+					  		TextField(
+					  			onChanged: (value) {
+					  				_filterItems(value);
+					  				if (value.isEmpty) {
+					  					setState(() {
+					  						displayedItems = allItems;
+					  					});
+					  				}
+					  			},
+					  			autofocus: true,
+					  			decoration: InputDecoration(
+					  				hintText: "اكتب للبحث...",
+					  				prefixIcon: Icon(Icons.search, color: AppColors.primary),
+					  				border: OutlineInputBorder(
+					  					borderRadius: BorderRadius.circular(15),
+					  					borderSide: BorderSide(color: AppColors.primary),
+					  				),
+					  				focusedBorder: OutlineInputBorder(
+					  					borderRadius: BorderRadius.circular(15),
+					  					borderSide: BorderSide(color: AppColors.primary, width: 2),
+					  				),
+					  			),
+					  		),
+					  		const SizedBox(height: 16),
+					  		const Text(
+					  			"يمكنك البحث بالاسم أو الوصف",
+					  			style: TextStyle(
+					  				color: AppColors.textSecondary,
+					  				fontSize: 12,
+					  			),
+					  		),
+					  		const SizedBox(height: 16),
+					  		Row(
+					  			mainAxisAlignment: MainAxisAlignment.end,
+					  			children: [
+					  				TextButton(
+					  					onPressed: () => Navigator.of(context).pop(),
+					  					style: TextButton.styleFrom(
+					  						foregroundColor: AppColors.primary,
+					  					),
+					  					child: const Text("إغلاق"),
+					  				),
+					  				const SizedBox(width: 8),
+					  				ElevatedButton(
+					  					onPressed: () {
+					  						Navigator.of(context).pop();
+					  					},
+					  					style: ElevatedButton.styleFrom(
+					  						backgroundColor: AppColors.primary,
+					  						foregroundColor: AppColors.secondary,
+					  					),
+					  					child: const Text("بحث"),
+					  				),
+					  			],
+					  		),
+					  	],
+					  ),
 					),
 				),
 			),

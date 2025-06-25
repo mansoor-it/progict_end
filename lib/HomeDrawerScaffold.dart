@@ -9,6 +9,7 @@ import 'package:untitled2/viw/MostOrderedProductsPage.dart';
 // تأكد من المسار الصحيح
 import 'package:untitled2/viw/categories_screen.dart'; // تأكد من المسار الصحيح
 import 'package:untitled2/viw/f/InvoicePage.dart';
+import 'package:untitled2/viw/f/o.dart';
 import 'package:untitled2/viw/login.dart'; // تأكد من المسار الصحيح
 import 'package:untitled2/viw/products_screen.dart'; // تأكد من المسار الصحيح
 import 'package:untitled2/viw/stores_all.dart'; // تأكد من المسار الصحيح
@@ -20,12 +21,12 @@ import 'Support or Help.dart';
 import 'controll/AdminLoginPage.dart'; // <-- استيراد خدمة المستخدم لجلب البيانات
 
 // --- ألوان للتصميم الجذاب (يمكن تخصيصها) ---
-const Color primaryDrawerColor = Color(0xFF6D4C41);
-const Color accentDrawerColor = Color(0xFF8D6E63);
-const Color headerDrawerColor = Color(0xFF5D4037);
+const Color primaryDrawerColor = Color(0xFF08338F);
+const Color accentDrawerColor = Color(0xFF399294);
+const Color headerDrawerColor = Color(0xFF3D3C69);
 const Color iconDrawerColor = Colors.white70;
 const Color textDrawerColor = Colors.white;
-const Color selectedTileColor = Color(0xFF4E342E);
+const Color selectedTileColor = Color(0xFF4D988E);
 
 class HomeDrawerScaffold extends StatefulWidget {
 	final User user; // المستخدم الأولي عند تسجيل الدخول
@@ -38,7 +39,7 @@ class HomeDrawerScaffold extends StatefulWidget {
 
 class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 	int _selectedIndex = 0;
-	String _title = 'الأقسام';
+	String _title = 'الصفحة الرئيسي ';
 	late User _currentUser; // لتخزين وعرض المستخدم الحالي
 	bool _isLoadingUser = false; // لتتبع حالة تحميل بيانات المستخدم
 
@@ -55,6 +56,7 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 	// بناء قائمة الصفحات
 	void _buildPages() {
 		_pages = [
+			MainHomePage(user: _currentUser,),
 			CategoriesScreen(user: _currentUser),
 			SimpleStoreListPage(user: _currentUser),
 			AllProductsPageNew(storeId: '', storeName: '',user: _currentUser),
@@ -100,16 +102,16 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 	void _updateTitle(int index) {
 		switch (index) {
 			case 0:
-				_title = 'الأقسام';
+				_title = 'الرئيسي';
 				break;
 			case 1:
-				_title = 'المتاجر';
+				_title = 'الاقسام';
 				break;
 			case 2:
-				_title = 'جميع المنتجات';
+				_title = 'المتاجر';
 				break;
 			case 3:
-				_title = 'السلة';
+				_title = 'جميع المنتجات';
 				break;
 			default:
 				_title = 'متجرك';
@@ -179,31 +181,9 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 
 		return Scaffold(
 			appBar: AppBar(
-				title: Text(_title, style: TextStyle(color: Colors.white)),
+				title: Text(_title),
 				centerTitle: true,
-				backgroundColor: primaryDrawerColor,
 				elevation: 2,
-				iconTheme: IconThemeData(color: Colors.white),
-				actions: [
-					IconButton(
-						icon: Badge(
-							label: Text('0'),
-							isLabelVisible: false,
-							child: const Icon(Icons.shopping_cart_outlined),
-						),
-						tooltip: 'السلة',
-						onPressed: () {
-							if (_pages.length > 3 && _pages[3] is MostOrderedProductsPage) {
-								_onSelectItem(3);
-							} else {
-								Navigator.push(
-									context,
-									MaterialPageRoute(builder: (context) =>MostOrderedProductsPage()),
-								);
-							}
-						},
-					),
-				],
 			),
 			drawer: Drawer(
 				backgroundColor: primaryDrawerColor,
@@ -214,11 +194,11 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 							padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, bottom: 16, left: 16, right: 16),
 							decoration: BoxDecoration(
 								color: headerDrawerColor,
-								image: DecorationImage(
-									image: AssetImage('assets/m.png'), // تأكد من وجود هذا المسار
-									fit: BoxFit.cover,
-									colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
-								),
+								// image: DecorationImage(
+								// 	image: AssetImage('assets/m.png'), // تأكد من وجود هذا المسار
+								// 	fit: BoxFit.cover,
+								// 	colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
+								// ),
 							),
 							child: _isLoadingUser
 									? Center(child: CircularProgressIndicator(color: Colors.white))
@@ -261,10 +241,10 @@ class _HomeDrawerScaffoldState extends State<HomeDrawerScaffold> {
 						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
 						_buildNavigationItem(Icons.edit_outlined, 'تعديل الملف الشخصي', _navigateToEditProfile),
 						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
-						_buildDrawerItem(Icons.category_outlined, 'الأقسام', 0, _selectedIndex == 0),
-						_buildDrawerItem(Icons.store_mall_directory_outlined, 'المتاجر', 1, _selectedIndex == 1),
-						_buildDrawerItem(Icons.shopping_bag_outlined, 'جميع المنتجات', 2, _selectedIndex == 2),
-						_buildDrawerItem(Icons.shopping_cart_outlined, 'السلة', 3, _selectedIndex == 3),
+						_buildDrawerItem(Icons.category_outlined, 'الرئيسي', 0, _selectedIndex == 0),
+						_buildDrawerItem(Icons.store_mall_directory_outlined, 'الأقسام', 1, _selectedIndex == 1),
+						_buildDrawerItem(Icons.shopping_bag_outlined, 'المتاجر ', 2, _selectedIndex == 2),
+						_buildDrawerItem(Icons.shopping_cart_outlined, 'جميع المنتجات ', 3, _selectedIndex == 3),
 						const Divider(color: Colors.white24, height: 20, thickness: 0.5, indent: 16, endIndent: 16),
 
 						ListTile(

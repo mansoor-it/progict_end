@@ -125,6 +125,43 @@ class _EditProfilePageState extends State<EditProfilePage> {
 		}
 	}
 
+	Future<void> _refreshProfile() async {
+		setState(() => _isLoading = true);
+		try {
+			final updatedUser = await UserService.getUserById(widget.user.id.toString());
+			if (updatedUser != null) {
+				setState(() {
+					_nameController.text = updatedUser.name;
+					_emailController.text = updatedUser.email;
+					_mobileController.text = updatedUser.mobile ?? '';
+					_passwordController.text = updatedUser.password ?? '';
+					_imageBase64 = updatedUser.image;
+
+					_createdAtController.text = updatedUser.createdAt != null
+							? DateFormat('yyyy-MM-dd hh:mm a', 'ar').format(DateTime.parse(updatedUser.createdAt!))
+							: 'غير متوفر';
+
+					_updatedAtController.text = updatedUser.updatedAt != null
+							? DateFormat('yyyy-MM-dd hh:mm a', 'ar').format(DateTime.parse(updatedUser.updatedAt!))
+							: 'غير متوفر';
+				});
+				ScaffoldMessenger.of(context).showSnackBar(
+					SnackBar(content: Text('تم تحديث البيانات بنجاح')),
+				);
+			} else {
+				ScaffoldMessenger.of(context).showSnackBar(
+					SnackBar(content: Text('فشل في تحديث البيانات')),
+				);
+			}
+		} catch (e) {
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text('حدث خطأ أثناء التحديث')),
+			);
+		} finally {
+			if (mounted) setState(() => _isLoading = false);
+		}
+	}
+
 	Future<void> _saveProfile() async {
 		if (_isLoading) return;
 		setState(() => _isLoading = true);
@@ -166,7 +203,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 					prefs.setString('mobile', updatedUser.mobile ?? '');
 					prefs.setString('image', updatedUser.image ?? '');
 					if (updatedUser.updatedAt != null) {
-						 prefs.setString('updated_at', updatedUser.updatedAt!);
+						prefs.setString('updated_at', updatedUser.updatedAt!);
 					}
 				});
 
@@ -205,6 +242,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
 				backgroundColor: primaryColor,
 				iconTheme: IconThemeData(color: Colors.white),
 				elevation: 2,
+				actions: [
+					IconButton(
+						icon: Icon(Icons.refresh),
+						onPressed: _refreshProfile,
+						tooltip: 'تحديث البيانات',
+					),
+				],
 			),
 			body: SingleChildScrollView(
 				padding: const EdgeInsets.all(24.0),

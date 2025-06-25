@@ -190,9 +190,9 @@ class _PaymentPageState extends State<PaymentPage> with SingleTickerProviderStat
 						),
 						const Divider(),
 						const SizedBox(height: 8),
-						_buildInfoRow('اسم الحساب:', 'منصور'),
+						_buildInfoRow('اسم الحساب:', 'منصور انيس مهيوب القجطاني'),
 						const SizedBox(height: 8),
-						_buildInfoRow('رقم الحساب:', '122222'),
+						_buildInfoRow('رقم الحساب:', '3043874216'),
 						const SizedBox(height: 16),
 						const Text(
 							'يرجى تحويل المبلغ المطلوب إلى الحساب المذكور أعلاه وإكمال الطلب.',
@@ -234,7 +234,7 @@ class _PaymentPageState extends State<PaymentPage> with SingleTickerProviderStat
 									SizedBox(width: 8),
 									Expanded(
 										child: Text(
-											'قم بتحويل المبلغ المطلوب عبر هذا الرقم ثم أكمل الطلب.',
+											'قم بتحويل المبلغ المطلوب عبر هذا الرقم مع زيادة 5% من المبلغ ثم أكمل الطلب وارسل .',
 											style: TextStyle(fontSize: 14),
 										),
 									),

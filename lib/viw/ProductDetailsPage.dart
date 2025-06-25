@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -10,6 +9,7 @@ import '../service/server_cart.dart';
 import 'cart_screen.dart';
 import '../model/user_model.dart';
 import '../model/model_cart.dart';
+import 'f/product_details_page.dart';
 
 // --- قائمة السلة العامة (يفضل استخدام إدارة حالة أفضل) ---
 List<Map<String, dynamic>> cartItems = [];
@@ -158,6 +158,31 @@ class _AllProductsPageState extends State<AllProductsPage> {
 		}
 	}
 
+	// دالة للانتقال إلى صفحة تفاصيل المنتج
+	void _navigateToProductDetails(dynamic product) {
+		final productIdStr = product['id'].toString();
+		final productColors = colors.where((c) => c != null && c['product_id']?.toString() == productIdStr).toList();
+		final productSizes = sizes.where((s) => s != null && s['product_id']?.toString() == productIdStr).toList();
+
+		Navigator.push(
+			context,
+			MaterialPageRoute(
+				builder: (context) => ProductDetailsPage(
+					product: product,
+					productColors: productColors,
+					productSizes: productSizes,
+					getColorFromName: getColorFromName,
+					onAddToCart: _handleAddToCart,
+					user: widget.user,
+					storeId: widget.storeId,
+				),
+			),
+		).then((_) {
+			// تحديث حالة السلة عند العودة من صفحة التفاصيل
+			_updateCartState();
+		});
+	}
+
 	@override
 	Widget build(BuildContext context) {
 		final double screenWidth = MediaQuery.of(context).size.width;
@@ -295,6 +320,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
 			productSizes: productSizes,
 			getColorFromName: getColorFromName,
 			onAddToCart: _handleAddToCart,
+			onTap: () => _navigateToProductDetails(product), // إضافة دالة النقر
 		);
 	}
 
@@ -314,13 +340,14 @@ class _AllProductsPageState extends State<AllProductsPage> {
 				productSizes: productSizes,
 				getColorFromName: getColorFromName,
 				onAddToCart: _handleAddToCart,
+				onTap: () => _navigateToProductDetails(product), // إضافة دالة النقر
 			),
 		);
 	}
 }
 
 // ======================================================
-// ودجت بطاقة المنتج (للشبكة) - معدلة لجعل المحتوى قابلاً للتمرير
+// ودجت بطاقة المنتج (للشبكة) - معدلة لإضافة وظيفة النقر
 // ======================================================
 class ProductGridCard extends StatefulWidget {
 	final dynamic product;
@@ -328,6 +355,7 @@ class ProductGridCard extends StatefulWidget {
 	final List<dynamic> productSizes;
 	final Color Function(String) getColorFromName;
 	final Future<void> Function(Map<String, dynamic>) onAddToCart;
+	final VoidCallback? onTap; // إضافة دالة النقر
 
 	const ProductGridCard({
 		Key? key,
@@ -336,6 +364,7 @@ class ProductGridCard extends StatefulWidget {
 		required this.productSizes,
 		required this.getColorFromName,
 		required this.onAddToCart,
+		this.onTap, // إضافة دالة النقر
 	}) : super(key: key);
 
 	@override
@@ -383,6 +412,29 @@ class _ProductGridCardState extends State<ProductGridCard> {
 							right: 8,
 							child: badge,
 						),
+					// إضافة طبقة شفافة للنقر على الصورة
+					Positioned.fill(
+						child: Material(
+							color: Colors.transparent,
+							child: InkWell(
+								borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+								onTap: widget.onTap,
+								child: Container(
+									decoration: BoxDecoration(
+										color: _isHovering ? Colors.black.withOpacity(0.1) : Colors.transparent,
+										borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+									),
+									child: _isHovering ? const Center(
+										child: Icon(
+											Icons.visibility_outlined,
+											color: Colors.white,
+											size: 32,
+										),
+									) : null,
+								),
+							),
+						),
+					),
 				],
 			),
 		);
@@ -399,6 +451,51 @@ class _ProductGridCardState extends State<ProductGridCard> {
 				],
 			),
 		);
+	}
+
+	Widget? _buildBadge(dynamic product) {
+		final isNew = product['is_new'] == true;
+		final discountPercentage = product['discount_percentage'] ?? 0;
+		final isBestseller = product['is_bestseller'] == true;
+
+		if (isNew) {
+			return Container(
+				padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+				decoration: BoxDecoration(
+					color: Colors.green[600],
+					borderRadius: BorderRadius.circular(12),
+				),
+				child: const Text(
+					"جديد",
+					style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+				),
+			);
+		} else if (discountPercentage > 0) {
+			return Container(
+				padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+				decoration: BoxDecoration(
+					color: Colors.red[600],
+					borderRadius: BorderRadius.circular(12),
+				),
+				child: Text(
+					"-$discountPercentage%",
+					style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+				),
+			);
+		} else if (isBestseller) {
+			return Container(
+				padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+				decoration: BoxDecoration(
+					color: Colors.orange[600],
+					borderRadius: BorderRadius.circular(12),
+				),
+				child: const Text(
+					"الأكثر مبيعاً",
+					style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+				),
+			);
+		}
+		return null;
 	}
 
 	@override
@@ -421,78 +518,80 @@ class _ProductGridCardState extends State<ProductGridCard> {
 						_buildProductImageWithBadge(),
 						// --- تعديل: استخدام Expanded مع SingleChildScrollView للمحتوى ---
 						Expanded(
-							child: SingleChildScrollView(
-								padding: const EdgeInsets.all(12.0),
-								child: Column(
-									crossAxisAlignment: CrossAxisAlignment.start,
-									// mainAxisAlignment: MainAxisAlignment.spaceBetween, // لا حاجة له مع التمرير
-									children: [
-										// --- الجزء العلوي: الاسم والسعر ---
-										Column(
-											crossAxisAlignment: CrossAxisAlignment.start,
-											children: [
-												Text(
-													productName,
-													style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, fontSize: 14),
-													maxLines: 1,
-													overflow: TextOverflow.ellipsis,
-												),
-												const SizedBox(height: 4),
-												Text(
-													"$price \$",
-													style: Theme.of(context).textTheme.titleMedium?.copyWith(
-														fontWeight: FontWeight.bold,
-														color: Colors.teal[800],
-														fontSize: 16,
+							child: InkWell(
+								onTap: widget.onTap, // إضافة النقر على المحتوى أيضاً
+								child: SingleChildScrollView(
+									padding: const EdgeInsets.all(12.0),
+									child: Column(
+										crossAxisAlignment: CrossAxisAlignment.start,
+										children: [
+											// --- الجزء العلوي: الاسم والسعر ---
+											Column(
+												crossAxisAlignment: CrossAxisAlignment.start,
+												children: [
+													Text(
+														productName,
+														style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, fontSize: 14),
+														maxLines: 1,
+														overflow: TextOverflow.ellipsis,
 													),
-												),
-											],
-										),
-										const SizedBox(height: 8),
+													const SizedBox(height: 4),
+													Text(
+														"$price \$",
+														style: Theme.of(context).textTheme.titleMedium?.copyWith(
+															fontWeight: FontWeight.bold,
+															color: Colors.teal[800],
+															fontSize: 16,
+														),
+													),
+												],
+											),
+											const SizedBox(height: 8),
 
-										// --- وصف المنتج قابل للتوسيع ---
-										Column(
-											crossAxisAlignment: CrossAxisAlignment.start,
-											children: [
-												InkWell(
-													onTap: () => setState(() => _showFullDescription = !_showFullDescription),
-													child: Row(
-														children: [
-															Text(
-																"الوصف:",
-																style: TextStyle(
-																	fontWeight: FontWeight.bold,
-																	fontSize: 12,
-																	color: Colors.grey[700],
+											// --- وصف المنتج قابل للتوسيع ---
+											Column(
+												crossAxisAlignment: CrossAxisAlignment.start,
+												children: [
+													InkWell(
+														onTap: () => setState(() => _showFullDescription = !_showFullDescription),
+														child: Row(
+															children: [
+																Text(
+																	"الوصف:",
+																	style: TextStyle(
+																		fontWeight: FontWeight.bold,
+																		fontSize: 12,
+																		color: Colors.grey[700],
+																	),
 																),
-															),
-															Icon(
-																_showFullDescription ? Icons.expand_less : Icons.expand_more,
-																size: 18,
-																color: Colors.grey[600],
-															),
-														],
+																Icon(
+																	_showFullDescription ? Icons.expand_less : Icons.expand_more,
+																	size: 18,
+																	color: Colors.grey[600],
+																),
+															],
+														),
 													),
-												),
-												const SizedBox(height: 4),
-												Text(
-													productDescription,
-													style: TextStyle(
-														fontSize: 12,
-														color: Colors.grey[600],
+													const SizedBox(height: 4),
+													Text(
+														productDescription,
+														style: TextStyle(
+															fontSize: 12,
+															color: Colors.grey[600],
+														),
+														maxLines: _showFullDescription ? null : 2,
+														overflow: _showFullDescription ? TextOverflow.visible : TextOverflow.ellipsis,
 													),
-													maxLines: _showFullDescription ? null : 2,
-													overflow: _showFullDescription ? TextOverflow.visible : TextOverflow.ellipsis,
-												),
-											],
-										),
-										const SizedBox(height: 8),
+												],
+											),
+											const SizedBox(height: 8),
 
-										// --- الجزء السفلي: الألوان والمقاسات والأزرار ---
-										if (widget.productColors.isNotEmpty || widget.productSizes.isNotEmpty)
-											_buildCompactSelectors(),
-										_buildActionRow(price),
-									],
+											// --- الجزء السفلي: الألوان والمقاسات والأزرار ---
+											if (widget.productColors.isNotEmpty || widget.productSizes.isNotEmpty)
+												_buildCompactSelectors(),
+											_buildActionRow(price),
+										],
+									),
 								),
 							),
 						),
@@ -656,7 +755,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
 }
 
 // ======================================================
-// ودجت بطاقة المنتج (للقائمة) - لا تغييرات هنا
+// ودجت بطاقة المنتج (للقائمة) - معدلة لإضافة وظيفة النقر
 // ======================================================
 class ProductListCard extends StatefulWidget {
 	final dynamic product;
@@ -664,6 +763,7 @@ class ProductListCard extends StatefulWidget {
 	final List<dynamic> productSizes;
 	final Color Function(String) getColorFromName;
 	final Future<void> Function(Map<String, dynamic>) onAddToCart;
+	final VoidCallback? onTap; // إضافة دالة النقر
 
 	const ProductListCard({
 		Key? key,
@@ -672,6 +772,7 @@ class ProductListCard extends StatefulWidget {
 		required this.productSizes,
 		required this.getColorFromName,
 		required this.onAddToCart,
+		this.onTap, // إضافة دالة النقر
 	}) : super(key: key);
 
 	@override
@@ -715,6 +816,22 @@ class _ProductListCardState extends State<ProductListCard> {
 							right: 6,
 							child: badge,
 						),
+					// إضافة طبقة شفافة للنقر على الصورة
+					Positioned.fill(
+						child: Material(
+							color: Colors.transparent,
+							child: InkWell(
+								borderRadius: BorderRadius.circular(12),
+								onTap: widget.onTap,
+								child: Container(
+									decoration: BoxDecoration(
+										color: Colors.black.withOpacity(0.05),
+										borderRadius: BorderRadius.circular(12),
+									),
+								),
+							),
+						),
+					),
 				],
 			),
 		);
@@ -724,6 +841,51 @@ class _ProductListCardState extends State<ProductListCard> {
 		return Center(
 			child: Text(message, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
 		);
+	}
+
+	Widget? _buildBadge(dynamic product) {
+		final isNew = product['is_new'] == true;
+		final discountPercentage = product['discount_percentage'] ?? 0;
+		final isBestseller = product['is_bestseller'] == true;
+
+		if (isNew) {
+			return Container(
+				padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+				decoration: BoxDecoration(
+					color: Colors.green[600],
+					borderRadius: BorderRadius.circular(8),
+				),
+				child: const Text(
+					"جديد",
+					style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9),
+				),
+			);
+		} else if (discountPercentage > 0) {
+			return Container(
+				padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+				decoration: BoxDecoration(
+					color: Colors.red[600],
+					borderRadius: BorderRadius.circular(8),
+				),
+				child: Text(
+					"-$discountPercentage%",
+					style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9),
+				),
+			);
+		} else if (isBestseller) {
+			return Container(
+				padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+				decoration: BoxDecoration(
+					color: Colors.orange[600],
+					borderRadius: BorderRadius.circular(8),
+				),
+				child: const Text(
+					"الأكثر مبيعاً",
+					style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9),
+				),
+			);
+		}
+		return null;
 	}
 
 	@override
@@ -737,126 +899,132 @@ class _ProductListCardState extends State<ProductListCard> {
 			shadowColor: Colors.black.withOpacity(0.1),
 			shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
 			clipBehavior: Clip.antiAlias,
-			child: Padding(
-				padding: const EdgeInsets.all(12.0),
-				child: Column(
-					crossAxisAlignment: CrossAxisAlignment.start,
-					children: [
-						Row(
-							crossAxisAlignment: CrossAxisAlignment.start,
-							children: [
-								_buildProductImageWithBadge(),
-								const SizedBox(width: 12),
-								Expanded(
-									child: Column(
-										crossAxisAlignment: CrossAxisAlignment.start,
-										children: [
-											Row(
-												mainAxisAlignment: MainAxisAlignment.spaceBetween,
-												children: [
-													Expanded(
-														child: Text(
-															productName,
-															style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-															maxLines: 1,
-															overflow: TextOverflow.ellipsis,
-														),
-													),
-													Text(
-														"$price \$",
-														style: Theme.of(context).textTheme.titleLarge?.copyWith(
-															fontWeight: FontWeight.bold,
-															color: Colors.teal[800],
-														),
-													),
-												],
-											),
-											const SizedBox(height: 8),
-											InkWell(
-												onTap: () => setState(() => _showFullDescription = !_showFullDescription),
-												child: Column(
-													crossAxisAlignment: CrossAxisAlignment.start,
+			child: InkWell(
+				onTap: widget.onTap, // إضافة النقر على البطاقة كاملة
+				child: Padding(
+					padding: const EdgeInsets.all(12.0),
+					child: Column(
+						crossAxisAlignment: CrossAxisAlignment.start,
+						children: [
+							Row(
+								crossAxisAlignment: CrossAxisAlignment.start,
+								children: [
+									_buildProductImageWithBadge(),
+									const SizedBox(width: 12),
+									Expanded(
+										child: Column(
+											crossAxisAlignment: CrossAxisAlignment.start,
+											children: [
+												Row(
+													mainAxisAlignment: MainAxisAlignment.spaceBetween,
 													children: [
-														Row(
-															children: [
-																Text(
-																	"الوصف:",
-																	style: TextStyle(
-																		fontWeight: FontWeight.bold,
-																		fontSize: 12,
-																		color: Colors.grey[700],
-																	),
-																),
-																Icon(
-																	_showFullDescription ? Icons.expand_less : Icons.expand_more,
-																	size: 18,
-																	color: Colors.grey[600],
-																),
-															],
-														),
-														const SizedBox(height: 4),
-														Text(
-															productDescription,
-															style: TextStyle(
-																fontSize: 12,
-																color: Colors.grey[600],
+														Expanded(
+															child: Text(
+																productName,
+																style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+																maxLines: 1,
+																overflow: TextOverflow.ellipsis,
 															),
-															maxLines: _showFullDescription ? null : 2,
-															overflow: _showFullDescription ? TextOverflow.visible : TextOverflow.ellipsis,
+														),
+														Text(
+															"$price \$",
+															style: Theme.of(context).textTheme.titleLarge?.copyWith(
+																fontWeight: FontWeight.bold,
+																color: Colors.teal[800],
+															),
 														),
 													],
 												),
-											),
-										],
+												const SizedBox(height: 8),
+												InkWell(
+													onTap: () => setState(() => _showFullDescription = !_showFullDescription),
+													child: Column(
+														crossAxisAlignment: CrossAxisAlignment.start,
+														children: [
+															Row(
+																children: [
+																	Text(
+																		"الوصف:",
+																		style: TextStyle(
+																			fontWeight: FontWeight.bold,
+																			fontSize: 12,
+																			color: Colors.grey[700],
+																		),
+																	),
+																	Icon(
+																		_showFullDescription ? Icons.expand_less : Icons.expand_more,
+																		size: 18,
+																		color: Colors.grey[600],
+																	),
+																],
+															),
+															const SizedBox(height: 4),
+															Text(
+																productDescription,
+																style: TextStyle(
+																	fontSize: 12,
+																	color: Colors.grey[600],
+																),
+																maxLines: _showFullDescription ? null : 2,
+																overflow: _showFullDescription ? TextOverflow.visible : TextOverflow.ellipsis,
+															),
+														],
+													),
+												),
+											],
+										),
 									),
-								),
-							],
-						),
-						const SizedBox(height: 12),
-						if (widget.productColors.isNotEmpty || widget.productSizes.isNotEmpty)
-							_buildCompactSelectors(),
-						const SizedBox(height: 12),
-						_buildActionRow(price),
-					],
+								],
+							),
+							const SizedBox(height: 12),
+							// --- الجزء السفلي: الألوان والمقاسات والأزرار ---
+							if (widget.productColors.isNotEmpty || widget.productSizes.isNotEmpty)
+								_buildCompactSelectors(),
+							_buildActionRow(price),
+						],
+					),
 				),
 			),
 		);
 	}
 
 	Widget _buildCompactSelectors() {
-		return Row(
-			children: [
-				if (widget.productColors.isNotEmpty)
-					Expanded(
-						child: _buildDropdown(selectedColorId, "اللون", widget.productColors, (value, item) {
-							setState(() {
-								selectedColorId = value;
-								selectedColorName = item?['color_name']?.toString();
-							});
-						}, (item) {
-							final colorName = item?['color_name']?.toString() ?? '';
-							return Row(mainAxisSize: MainAxisSize.min, children: [
-								CircleAvatar(backgroundColor: widget.getColorFromName(colorName), radius: 7),
-								const SizedBox(width: 6),
-								Expanded(child: Text(colorName, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
-							]);
-						}),
-					),
-				if (widget.productColors.isNotEmpty && widget.productSizes.isNotEmpty)
-					const SizedBox(width: 8),
-				if (widget.productSizes.isNotEmpty)
-					Expanded(
-						child: _buildDropdown(selectedSizeId, "المقاس", widget.productSizes, (value, item) {
-							setState(() {
-								selectedSizeId = value;
-								selectedSizeName = item?['size']?.toString();
-							});
-						}, (item) {
-							final sizeValue = item?['size']?.toString() ?? '';
-							return Text(sizeValue, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis);
-						}),
-					),
-			],
+		return Padding(
+			padding: const EdgeInsets.symmetric(vertical: 8.0),
+			child: Row(
+				children: [
+					if (widget.productColors.isNotEmpty)
+						Expanded(
+							child: _buildDropdown(selectedColorId, "اللون", widget.productColors, (value, item) {
+								setState(() {
+									selectedColorId = value;
+									selectedColorName = item?['color_name']?.toString();
+								});
+							}, (item) {
+								final colorName = item?['color_name']?.toString() ?? '';
+								return Row(mainAxisSize: MainAxisSize.min, children: [
+									CircleAvatar(backgroundColor: widget.getColorFromName(colorName), radius: 8),
+									const SizedBox(width: 8),
+									Expanded(child: Text(colorName, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)),
+								]);
+							}),
+						),
+					if (widget.productColors.isNotEmpty && widget.productSizes.isNotEmpty)
+						const SizedBox(width: 12),
+					if (widget.productSizes.isNotEmpty)
+						Expanded(
+							child: _buildDropdown(selectedSizeId, "المقاس", widget.productSizes, (value, item) {
+								setState(() {
+									selectedSizeId = value;
+									selectedSizeName = item?['size']?.toString();
+								});
+							}, (item) {
+								final sizeValue = item?['size']?.toString() ?? '';
+								return Text(sizeValue, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis);
+							}),
+						),
+				],
+			),
 		);
 	}
 
@@ -872,7 +1040,7 @@ class _ProductListCardState extends State<ProductListCard> {
 				value: currentValue,
 				isDense: true,
 				isExpanded: true,
-				hint: Text(hint, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+				hint: Text(hint, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
 				decoration: InputDecoration(
 					border: OutlineInputBorder(
 						borderRadius: BorderRadius.circular(8),
@@ -886,7 +1054,7 @@ class _ProductListCardState extends State<ProductListCard> {
 						borderRadius: BorderRadius.circular(8),
 						borderSide: BorderSide(color: Colors.teal, width: 1.5),
 					),
-					contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+					contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 					fillColor: Colors.white,
 					filled: true,
 				),
@@ -913,14 +1081,14 @@ class _ProductListCardState extends State<ProductListCard> {
 					children: [
 						_buildQuantityButton(Icons.remove, () => setState(() => quantity--), quantity > 1),
 						Padding(
-							padding: const EdgeInsets.symmetric(horizontal: 8.0),
+							padding: const EdgeInsets.symmetric(horizontal: 12.0),
 							child: Text(quantity.toString(), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
 						),
 						_buildQuantityButton(Icons.add, () => setState(() => quantity++)),
 					],
 				),
 				SizedBox(
-					width: 42, height: 42,
+					width: 50, height: 50,
 					child: Tooltip(
 						message: 'إضافة إلى السلة',
 						child: ElevatedButton(
@@ -937,6 +1105,7 @@ class _ProductListCardState extends State<ProductListCard> {
 									'color_id': selectedColorId, 'color_name': selectedColorName,
 									'size_id': selectedSizeId, 'size_name': selectedSizeName,
 									'image': widget.product['image'],
+									'store_id': widget.product['store_id'], // تأكد من وجود هذا الحقل أو قم بتمريره
 								});
 							},
 							style: ElevatedButton.styleFrom(
@@ -946,7 +1115,7 @@ class _ProductListCardState extends State<ProductListCard> {
 								shape: const CircleBorder(),
 								elevation: 3.0,
 							),
-							child: const Icon(Icons.add_shopping_cart_outlined, size: 20),
+							child: const Icon(Icons.add_shopping_cart_outlined, size: 24),
 						),
 					),
 				),
@@ -956,10 +1125,10 @@ class _ProductListCardState extends State<ProductListCard> {
 
 	Widget _buildQuantityButton(IconData icon, VoidCallback? onPressed, [bool enabled = true]) {
 		return SizedBox(
-			width: 30, height: 30,
+			width: 36, height: 36,
 			child: IconButton(
 				padding: EdgeInsets.zero,
-				icon: Icon(icon, size: 18, color: enabled ? (icon == Icons.add ? Colors.green[700] : Colors.red[700]) : Colors.grey[400]),
+				icon: Icon(icon, size: 20, color: enabled ? (icon == Icons.add ? Colors.green[700] : Colors.red[700]) : Colors.grey[400]),
 				onPressed: enabled ? onPressed : null,
 			),
 		);
@@ -968,72 +1137,6 @@ class _ProductListCardState extends State<ProductListCard> {
 	void _showWarningSnackBar(String message) {
 		ScaffoldMessenger.of(context).showSnackBar(
 			SnackBar(content: Text(message), backgroundColor: Colors.orangeAccent[700]),
-		);
-	}
-}
-
-// ======================================================
-// دالة بناء الشارات (Badges)
-// ======================================================
-Widget? _buildBadge(dynamic product) {
-	final bool isNew = product['is_new'] ?? false;
-	final int discount = product['discount_percentage'] ?? 0;
-	final bool isBestseller = product['is_bestseller'] ?? false;
-
-	if (isNew) {
-		return _BadgeChip(text: "جديد", icon: Icons.fiber_new_outlined, color: Colors.blueAccent[700]!);
-	} else if (discount > 0) {
-		return _BadgeChip(text: "$discount% خصم", icon: Icons.local_offer_outlined, color: Colors.redAccent[700]!);
-	} else if (isBestseller) {
-		return _BadgeChip(text: "الأكثر مبيعًا", icon: Icons.star_border_outlined, color: Colors.amber[800]!);
-	}
-	return null;
-}
-
-// ======================================================
-// ودجت الشارة المخصصة
-// ======================================================
-class _BadgeChip extends StatelessWidget {
-	final String text;
-	final IconData icon;
-	final Color color;
-
-	const _BadgeChip({
-		required this.text,
-		required this.icon,
-		required this.color,
-	});
-
-	@override
-	Widget build(BuildContext context) {
-		return Container(
-			padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-			decoration: BoxDecoration(
-				color: color,
-				borderRadius: BorderRadius.circular(12),
-				boxShadow: [
-					BoxShadow(
-						color: color.withOpacity(0.3),
-						blurRadius: 4,
-						offset: const Offset(0, 2),
-					),
-				],
-			),
-			child: Row(
-				mainAxisSize: MainAxisSize.min,
-				children: [
-					Icon(icon, color: Colors.white, size: 12),
-					const SizedBox(width: 4),
-					Text(
-						text,
-						style: const TextStyle(
-							color: Colors.white,
-							fontSize: 9,
-							fontWeight: FontWeight.w600,
-						),
-					),
-				],
-			),
 		);
 	}
 }
